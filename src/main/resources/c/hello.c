@@ -16,3 +16,7 @@ void set(char *buffer, int index, char value) {
 int get(char *buffer, int index) {
 	return buffer[index];
 }
+
+void print(char *str) {
+	printf("%s\n", str);
+}

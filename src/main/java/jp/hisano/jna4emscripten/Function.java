@@ -383,13 +383,13 @@ public class Function extends Pointer {
             result = new Integer(Native.invokeInt(functionName, callFlags, args));
         }
         else if (returnType==long.class || returnType==Long.class) {
-            result = new Long(Native.invokeLong(peer, callFlags, args));
+            result = new Long(Native.invokeLong(functionName, callFlags, args));
         }
         else if (returnType==float.class || returnType==Float.class) {
-            result = new Float(Native.invokeFloat(peer, callFlags, args));
+            result = new Float(Native.invokeFloat(functionName, callFlags, args));
         }
         else if (returnType==double.class || returnType==Double.class) {
-            result = new Double(Native.invokeDouble(peer, callFlags, args));
+            result = new Double(Native.invokeDouble(functionName, callFlags, args));
         }
         else if (returnType==String.class) {
             result = invokeString(callFlags, args, false);

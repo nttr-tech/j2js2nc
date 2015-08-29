@@ -918,7 +918,9 @@ public final class Native implements Version {
     	return Version.VERSION_NATIVE;
     }
 
-    private static native String getAPIChecksum();
+    private static String getAPIChecksum() {
+    	return "1a6047467b59e8748f975e03016ce3d9";
+    }
 
     /** Retrieve the last error set by the OS.  This corresponds to
      * <code>GetLastError()</code> on Windows, and <code>errno</code> on
@@ -1690,7 +1692,9 @@ public final class Native implements Version {
      *
      * @return	The value returned by the target native function
      */
-    static native long invokeLong(long fp, int callFlags, Object[] args);
+    static long invokeLong(String fp, int callFlags, Object[] args) {
+    	return ((Number)invoke(fp, args)).longValue();
+    }
 
     /**
      * Call the native function being represented by this object
@@ -1703,12 +1707,17 @@ public final class Native implements Version {
     	invoke(fp, args);
     }
 
-    static Object invoke(String fp, Object[] args) {
-    	try {
-    		return ((Invocable)NativeLibrary.handle).invokeFunction(fp, args);
-    	} catch (NoSuchMethodException | ScriptException e) {
-    		throw new UnsatisfiedLinkError();
-    	}
+    /**
+     * Call the native function being represented by this object
+     * @param fp function pointer
+     * @param   callFlags calling convention to be used
+     * @param	args
+     *			Arguments to pass to the native function
+     *
+     * @return	The value returned by the target native function
+     */
+    static float invokeFloat(String fp, int callFlags, Object[] args) {
+    	return ((Number)invoke(fp, args)).floatValue();
     }
 
     /**
@@ -1720,18 +1729,9 @@ public final class Native implements Version {
      *
      * @return	The value returned by the target native function
      */
-    static native float invokeFloat(long fp, int callFlags, Object[] args);
-
-    /**
-     * Call the native function being represented by this object
-     * @param fp function pointer
-     * @param   callFlags calling convention to be used
-     * @param	args
-     *			Arguments to pass to the native function
-     *
-     * @return	The value returned by the target native function
-     */
-    static native double invokeDouble(long fp, int callFlags, Object[] args);
+    static double invokeDouble(String fp, int callFlags, Object[] args) {
+    	return ((Number)invoke(fp, args)).doubleValue();
+    }
 
     /**
      * Call the native function being represented by this object
@@ -1829,7 +1829,11 @@ public final class Native implements Version {
 
     static native void read(long addr, double[] buf, int index, int length);
 
-    static native void write(long addr, byte[] buf, int index, int length);
+    static void write(long addr, byte[] buf, int index, int length) {
+    	for (int i = 0; i < length; i++) {
+    		setByte(addr + i, buf[index + i]);
+    	}
+    }
 
     static native void write(long addr, short[] buf, int index, int length);
 
@@ -1843,7 +1847,9 @@ public final class Native implements Version {
 
     static native void write(long addr, double[] buf, int index, int length);
 
-    static native byte getByte(long addr);
+    static byte getByte(long addr) {
+    	return ((Number)eval("HEAP8[" + addr + "];")).byteValue();
+    }
 
     static native char getChar(long addr);
 
@@ -1886,7 +1892,10 @@ public final class Native implements Version {
 
     static native void setMemory(long addr, long length, byte value);
 
-    static native void setByte(long addr, byte value);
+    static void setByte(long addr, byte value) {
+    	String script = "HEAP8[" + addr + "] = " + value + ";";
+    	eval(script);
+    }
 
     static native void setShort(long addr, short value);
 
@@ -1904,20 +1913,46 @@ public final class Native implements Version {
 
     static native void setWideString(long addr, String value);
 
+    static Object invoke(String fp, Object[] args) {
+    	try {
+    		for (int i = 0; i < args.length; i++) {
+    			Object argument = args[i];
+    			if (argument instanceof Pointer) {
+    				args[i] = ((Pointer)argument).peer;
+    			}
+    		}
+    		return ((Invocable)NativeLibrary.handle).invokeFunction(fp, args);
+    	} catch (NoSuchMethodException | ScriptException e) {
+    		throw new UnsatisfiedLinkError();
+    	}
+    }
+
+    static Object eval(String script) {
+    	try {
+    		return NativeLibrary.handle.eval(script);
+    	} catch (ScriptException e) {
+    		throw new IndexOutOfBoundsException();
+    	}
+    }
+
     /**
      * Call the real native malloc
      * @param size size of the memory to be allocated
      * @return native address of the allocated memory block; zero if the
      * allocation failed.
      */
-    public static native long malloc(long size);
+    public static long malloc(long size) {
+    	return ((Number)invoke("_malloc", new Object[] {size})).longValue();
+    }
 
     /**
      * Call the real native free
      * @param ptr native address to be freed; a value of zero has no effect,
      * passing an already-freed pointer will cause pain.
      */
-    public static native void free(long ptr);
+    public static void free(long ptr) {
+    	invoke("_free", new Object[] {ptr});
+    }
 
     /**
      * Get a direct ByteBuffer mapped to the memory pointed to by the pointer.
