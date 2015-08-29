@@ -973,13 +973,6 @@ callBugCallback(void (__stdcall *func)(long,int,double,
 
 #endif /* _WIN32 && !_WIN64 */
 
-#include <jni.h>
-#include <math.h>
-JNIEXPORT jdouble JNICALL
-Java_com_sun_jna_PerformanceTest_00024JNI_cos(JNIEnv *env, jclass cls, jdouble x) {
-  return cos(x);
-}
-
 #ifdef __cplusplus
 }
 #endif
