@@ -32,6 +32,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+import javax.script.ScriptEngine;
+
 /**
  * Provides management of native library resources.  One instance of this
  * class corresponds to a single loaded native library.  May also be used
@@ -65,7 +67,7 @@ import java.util.StringTokenizer;
  */
 public class NativeLibrary {
 
-    private long handle;
+    static ScriptEngine handle;
     private final String libraryName;
     private final String libraryPath;
     private final Map functions = new HashMap();
@@ -87,7 +89,7 @@ public class NativeLibrary {
         return name + "|" + flags + "|" + encoding;
     }
 
-    private NativeLibrary(String libraryName, String libraryPath, long handle, Map options) {
+    private NativeLibrary(String libraryName, String libraryPath, ScriptEngine handle, Map options) {
         this.libraryName = getLibraryName(libraryName);
         this.libraryPath = libraryPath;
         this.handle = handle;
@@ -158,7 +160,7 @@ public class NativeLibrary {
 	}
         searchPath.addAll(initPaths("jna.library.path"));
         String libraryPath = findLibraryPath(libraryName, searchPath);
-        long handle = 0;
+        ScriptEngine handle = null;
         //
         // Only search user specified paths first.  This will also fall back
         // to dlopen/LoadLibrary() since findLibraryPath returns the mapped
@@ -178,13 +180,13 @@ public class NativeLibrary {
             searchPath.addAll(librarySearchPath);
         }
         try {
-            if (handle == 0) {
+            if (handle == null) {
                 libraryPath = findLibraryPath(libraryName, searchPath);
 		if (Native.DEBUG_LOAD) {
 		    System.out.println("Trying " + libraryPath);
 		}
                 handle = Native.open(libraryPath, openFlags);
-                if (handle == 0) {
+                if (handle == null) {
                     throw new UnsatisfiedLinkError("Failed to load library '" + libraryName + "'");
                 }
             }
@@ -254,7 +256,7 @@ public class NativeLibrary {
             }
             // As a last resort, try to extract the library from the class
             // path, using the current context class loader.
-            if (handle == 0) {
+            if (handle == null) {
                 try {
                     File embedded = Native.extractFromResourcePath(libraryName, (ClassLoader)options.get(Library.OPTION_CLASSLOADER));
                     handle = Native.open(embedded.getAbsolutePath());
@@ -267,7 +269,7 @@ public class NativeLibrary {
                 catch(IOException e2) { e = new UnsatisfiedLinkError(e2.getMessage()); }
             }
 
-            if (handle == 0) {
+            if (handle == null) {
                 throw new UnsatisfiedLinkError("Unable to load library '" + libraryName + "': "
                                                + e.getMessage());
             }
@@ -489,6 +491,9 @@ public class NativeLibrary {
         if (name.startsWith(prefix)) {
             name = name.substring(prefix.length());
         }
+        if (Platform.isJS()) {
+        	name = "_" + name;
+        }
         int flags = this.callFlags;
         Class[] etypes = method.getExceptionTypes();
         for (int i=0;i < etypes.length;i++) {
@@ -566,10 +571,10 @@ public class NativeLibrary {
      * @throws UnsatisfiedLinkError if the symbol can't be found
      */
     long getSymbolAddress(String name) {
-        if (handle == 0) {
+        if (handle == null) {
             throw new UnsatisfiedLinkError("Library has been unloaded");
         }
-        return Native.findSymbol(handle, name);
+        return 0;
     }
     public String toString() {
         return "Native Library <" + libraryPath + "@" + handle + ">";
@@ -618,9 +623,9 @@ public class NativeLibrary {
             }
         }
         synchronized(this) {
-            if (handle != 0) {
+            if (handle != null) {
                 Native.close(handle);
-                handle = 0;
+                handle = null;
             }
         }
     }
@@ -687,6 +692,12 @@ public class NativeLibrary {
         @param libName base (undecorated) name of library
     */
     static String mapSharedLibraryName(String libName) {
+    	if (Platform.isJS()) {
+    		if (libName.endsWith(".js")) {
+    			return libName;
+    		}
+    		return libName + ".js";
+    	}
         if (Platform.isMac()) {
             if (libName.startsWith("lib")
                 && (libName.endsWith(".dylib")

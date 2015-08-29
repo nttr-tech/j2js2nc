@@ -364,23 +364,23 @@ public class Function extends Pointer {
     Object invoke(Object[] args, Class returnType, boolean allowObjects) {
         Object result = null;
         if (returnType == null || returnType==void.class || returnType==Void.class) {
-            Native.invokeVoid(peer, callFlags, args);
+            Native.invokeVoid(functionName, callFlags, args);
             result = null;
         }
         else if (returnType==boolean.class || returnType==Boolean.class) {
-            result = valueOf(Native.invokeInt(peer, callFlags, args) != 0);
+            result = valueOf(Native.invokeInt(functionName, callFlags, args) != 0);
         }
         else if (returnType==byte.class || returnType==Byte.class) {
-            result = new Byte((byte)Native.invokeInt(peer, callFlags, args));
+            result = new Byte((byte)Native.invokeInt(functionName, callFlags, args));
         }
         else if (returnType==short.class || returnType==Short.class) {
-            result = new Short((short)Native.invokeInt(peer, callFlags, args));
+            result = new Short((short)Native.invokeInt(functionName, callFlags, args));
         }
         else if (returnType==char.class || returnType==Character.class) {
-            result = new Character((char)Native.invokeInt(peer, callFlags, args));
+            result = new Character((char)Native.invokeInt(functionName, callFlags, args));
         }
         else if (returnType==int.class || returnType==Integer.class) {
-            result = new Integer(Native.invokeInt(peer, callFlags, args));
+            result = new Integer(Native.invokeInt(functionName, callFlags, args));
         }
         else if (returnType==long.class || returnType==Long.class) {
             result = new Long(Native.invokeLong(peer, callFlags, args));
@@ -467,7 +467,7 @@ public class Function extends Pointer {
     }
     
     private Pointer invokePointer(int callFlags, Object[] args) {
-        long ptr = Native.invokePointer(peer, callFlags, args);
+        long ptr = Native.invokePointer(functionName, callFlags, args);
         return ptr == 0 ? null : new Pointer(ptr);
     }
 

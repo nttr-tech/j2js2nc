@@ -17,7 +17,9 @@ import java.awt.GraphicsEnvironment;
 import java.awt.HeadlessException;
 import java.awt.Window;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,6 +48,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.WeakHashMap;
+
+import javax.script.Invocable;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 
 import jp.hisano.jna4emscripten.Callback.UncaughtExceptionHandler;
 import jp.hisano.jna4emscripten.Structure.FFIType;
@@ -128,15 +135,11 @@ public final class Native implements Version {
     static final int MAX_PADDING;
 
     static {
-        loadNativeDispatchLibrary();
         POINTER_SIZE = sizeof(TYPE_VOIDP);
         LONG_SIZE = sizeof(TYPE_LONG);
         WCHAR_SIZE = sizeof(TYPE_WCHAR_T);
         SIZE_T_SIZE = sizeof(TYPE_SIZE_T);
 
-        // Perform initialization of other JNA classes until *after*
-        // initializing the above final fields
-        initIDs();
         if (Boolean.getBoolean("jna.protected")) {
             setProtected(true);
         }
@@ -198,8 +201,6 @@ public final class Native implements Version {
     }
 
     private Native() { }
-
-    private static native void initIDs();
 
     /** Set whether native memory accesses are protected from invalid
      * accesses.  This should only be set true when testing or debugging,
@@ -898,9 +899,25 @@ public final class Native implements Version {
      * Initialize field and method IDs for native methods of this class.
      * Returns the size of a native pointer.
      **/
-    private static native int sizeof(int type);
+    private static int sizeof(int type) {
+    	switch (type) {
+    	case TYPE_VOIDP:
+    		return 8;
+    	case TYPE_LONG:
+    		return 8;
+    	case TYPE_WCHAR_T:
+    		return 8;
+    	case TYPE_SIZE_T:
+    		return 8;
+    	default:
+    		throw new IllegalArgumentException(String.format("Invalid size of type %d", type));
+    	}
+    }
 
-    private static native String getNativeVersion();
+    private static String getNativeVersion() {
+    	return Version.VERSION_NATIVE;
+    }
+
     private static native String getAPIChecksum();
 
     /** Retrieve the last error set by the OS.  This corresponds to
@@ -1660,7 +1677,9 @@ public final class Native implements Version {
      *
      * @return	The value returned by the target native function
      */
-    static  native int invokeInt(long fp, int callFlags, Object[] args);
+    static int invokeInt(String fp, int callFlags, Object[] args) {
+    	return ((Number)invoke(fp, args)).intValue();
+    }
 
     /**
      * Call the native function being represented by this object
@@ -1680,7 +1699,17 @@ public final class Native implements Version {
      * @param	args
      *			Arguments to pass to the native function
      */
-    static native void invokeVoid(long fp, int callFlags, Object[] args);
+    static void invokeVoid(String fp, int callFlags, Object[] args) {
+    	invoke(fp, args);
+    }
+
+    static Object invoke(String fp, Object[] args) {
+    	try {
+    		return ((Invocable)NativeLibrary.handle).invokeFunction(fp, args);
+    	} catch (NoSuchMethodException | ScriptException e) {
+    		throw new UnsatisfiedLinkError();
+    	}
+    }
 
     /**
      * Call the native function being represented by this object
@@ -1713,7 +1742,9 @@ public final class Native implements Version {
      *
      * @return	The native pointer returned by the target native function
      */
-    static native long invokePointer(long fp, int callFlags, Object[] args);
+    static long invokePointer(String fp, int callFlags, Object[] args) {
+    	return ((Number)invoke(fp, args)).longValue();
+    }
 
     /**
      * Call the native function being represented by this object, returning
@@ -1755,17 +1786,30 @@ public final class Native implements Version {
     static native Object invokeObject(long fp, int callFlags, Object[] args);
 
     /** Open the requested native library with default options. */
-    static long open(String name) {
+    static ScriptEngine open(String name) {
         return open(name, -1);
     }
 
     /** Open the requested native library with the specified platform-specific
      * otions.
      */
-    static native long open(String name, int flags);
+    static ScriptEngine open(String name, int flags) {
+    	File file = new File(name);
+    	if (!file.exists()) {
+    		return null;
+    	}
+    	ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
+    	try {
+    		engine.eval(new FileReader(file));
+    	} catch (FileNotFoundException| ScriptException e) {
+    		throw new IllegalArgumentException(e);
+    	}
+    	return engine;
+    }
 
     /** Close the given native library. */
-    static native void close(long handle);
+    static void close(ScriptEngine handle) {
+    }
 
     static native long findSymbol(long handle, String name);
 

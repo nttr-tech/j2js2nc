@@ -24,6 +24,7 @@ public final class Platform {
     public static final int GNU = 9;
     public static final int KFREEBSD = 10;
     public static final int NETBSD = 11;
+    public static final int JS = 12;
 
     /** Whether read-only (final) fields within Structures are supported. */
     public static final boolean RO_FIELDS;
@@ -49,50 +50,7 @@ public final class Platform {
     public static final String ARCH;
 
     static {
-        String osName = System.getProperty("os.name");
-        if (osName.startsWith("Linux")) {
-            if ("dalvik".equals(System.getProperty("java.vm.name").toLowerCase())) {
-                osType = ANDROID;
-                // Native libraries on android must be bundled with the APK
-                System.setProperty("jna.nounpack", "true");
-            }
-            else {
-                osType = LINUX;
-            }
-        }
-        else if (osName.startsWith("AIX")) {
-            osType = AIX;
-        }
-        else if (osName.startsWith("Mac") || osName.startsWith("Darwin")) {
-            osType = MAC;
-        }
-        else if (osName.startsWith("Windows CE")) {
-            osType = WINDOWSCE;
-        }
-        else if (osName.startsWith("Windows")) {
-            osType = WINDOWS;
-        }
-        else if (osName.startsWith("Solaris") || osName.startsWith("SunOS")) {
-            osType = SOLARIS;
-        }
-        else if (osName.startsWith("FreeBSD")) {
-            osType = FREEBSD;
-        }
-        else if (osName.startsWith("OpenBSD")) {
-            osType = OPENBSD;
-        }
-        else if (osName.equalsIgnoreCase("gnu")) {
-            osType = GNU;
-        }
-        else if (osName.equalsIgnoreCase("gnu/kfreebsd")) {
-            osType = KFREEBSD;
-        }
-        else if (osName.equalsIgnoreCase("netbsd")) {
-            osType = NETBSD;
-        }
-        else {
-            osType = UNSPECIFIED;
-        }
+        osType = JS;
         boolean hasBuffers = false;
         try {
             Class.forName("java.nio.Buffer");
@@ -110,11 +68,14 @@ public final class Platform {
         MATH_LIBRARY_NAME = osType == WINDOWS ? "msvcrt" : osType == WINDOWSCE ? "coredll" : "m";
         HAS_DLL_CALLBACKS = osType == WINDOWS;
         RESOURCE_PREFIX = getNativeLibraryResourcePrefix();
-        ARCH = System.getProperty("os.arch").toLowerCase().trim();
+        ARCH = "js";
     }
     private Platform() { }
     public static final int getOSType() {
         return osType;
+    }
+    public static final boolean isJS() {
+    	return osType == JS;
     }
     public static final boolean isMac() {
         return osType == MAC;
@@ -167,18 +128,6 @@ public final class Platform {
         return true;
     }
     public static final boolean is64Bit() {
-        String model = System.getProperty("sun.arch.data.model",
-                                          System.getProperty("com.ibm.vm.bitmode"));
-        if (model != null) {
-            return "64".equals(model);
-        }
-        if ("x86_64".equals(ARCH)
-            || "ia64".equals(ARCH)
-            || "ppc64".equals(ARCH)
-            || "sparcv9".equals(ARCH)
-            || "amd64".equals(ARCH)) {
-            return true;
-        }
         return Native.POINTER_SIZE == 8;
     }
 
@@ -225,63 +174,6 @@ public final class Platform {
         @param name from <code>os.name</code> System property
     */
     static String getNativeLibraryResourcePrefix(int osType, String arch, String name) {
-        String osPrefix;
-        arch = arch.toLowerCase().trim();
-        if ("powerpc".equals(arch)) {
-            arch = "ppc";
-        }
-        else if ("powerpc64".equals(arch)) {
-            arch = "ppc64";
-        }
-        else if ("i386".equals(arch)) {
-            arch = "x86";
-        }
-        else if ("x86_64".equals(arch) || "amd64".equals(arch)) {
-            arch = "x86-64";
-        }
-        switch(osType) {
-        case Platform.ANDROID:
-            if (arch.startsWith("arm")) {
-                arch = "arm";
-            }
-            osPrefix = "android-" + arch;
-            break;
-        case Platform.WINDOWS:
-            osPrefix = "win32-" + arch;
-            break;
-        case Platform.WINDOWSCE:
-            osPrefix = "w32ce-" + arch;
-            break;
-        case Platform.MAC:
-            osPrefix = "darwin";
-            break;
-        case Platform.LINUX:
-            osPrefix = "linux-" + arch;
-            break;
-        case Platform.SOLARIS:
-            osPrefix = "sunos-" + arch;
-            break;
-        case Platform.FREEBSD:
-            osPrefix = "freebsd-" + arch;
-            break;
-        case Platform.OPENBSD:
-            osPrefix = "openbsd-" + arch;
-            break;
-        case Platform.NETBSD:
-            osPrefix = "netbsd-" + arch;
-            break;
-        case Platform.KFREEBSD:
-            osPrefix = "kfreebsd-" + arch;
-            break;
-        default:
-            osPrefix = name.toLowerCase();
-            int space = osPrefix.indexOf(" ");
-            if (space != -1) {
-                osPrefix = osPrefix.substring(0, space);
-            }
-            osPrefix += "-" + arch;
-            break;
-        }
-        return osPrefix;
+        return "js";
     }
 }
