@@ -1,11 +1,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
+
 	<groupId>jp.hisano</groupId>
-	<artifactId>jna4emscripten</artifactId>
+	<artifactId>j2js2nc</artifactId>
 	<version>1.0</version>
-	<name>JNA for Emscripten</name>
-	<description>Java Native Access for Emscripten</description>
+	<name>j2js2nc (Java to JavaScript to Native Code)</name>
+	<description>Java Binding Library from Java to JavaScript to Native Code with JNA-like API and Emscripten</description>
+
 	<dependencies>
 		<dependency>
 			<groupId>junit</groupId>
@@ -20,6 +22,7 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+
 	<build>
 		<plugins>
 			<plugin>
