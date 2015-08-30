@@ -55,7 +55,6 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 import jp.hisano.j2js2nc.Callback.UncaughtExceptionHandler;
-import jp.hisano.j2js2nc.Structure.FFIType;
 
 /** Provides generation of invocation plumbing for a defined native
  * library interface.  Also provides various utilities for native operations.
@@ -161,6 +160,7 @@ public final class Native implements Version {
             || (Platform.isLinux() && (Platform.isARM() || Platform.isPPC()))
             || Platform.isAIX()
             || Platform.isAndroid()
+            || Platform.isJS()
             ? 8 : LONG_SIZE;
         MAX_PADDING = (Platform.isMac() && Platform.isPPC()) ? 8 : MAX_ALIGNMENT;
     }
@@ -902,13 +902,13 @@ public final class Native implements Version {
     private static int sizeof(int type) {
     	switch (type) {
     	case TYPE_VOIDP:
-    		return 8;
+    		return 4;
     	case TYPE_LONG:
-    		return 8;
+    		return 4;
     	case TYPE_WCHAR_T:
-    		return 8;
+    		return 4;
     	case TYPE_SIZE_T:
-    		return 8;
+    		return 4;
     	default:
     		throw new IllegalArgumentException(String.format("Invalid size of type %d", type));
     	}
@@ -1425,127 +1425,127 @@ public final class Native implements Version {
     // options: read parameter type mapping (long/native long),
     // method name, library name, call conv
     public static void register(Class cls, NativeLibrary lib) {
-        Method[] methods = cls.getDeclaredMethods();
-        List mlist = new ArrayList();
-        TypeMapper mapper = (TypeMapper)
-            lib.getOptions().get(Library.OPTION_TYPE_MAPPER);
-
-        for (int i=0;i < methods.length;i++) {
-            if ((methods[i].getModifiers() & Modifier.NATIVE) != 0) {
-                mlist.add(methods[i]);
-            }
-        }
-        long[] handles = new long[mlist.size()];
-        for (int i=0;i < handles.length;i++) {
-            Method method = (Method)mlist.get(i);
-            String sig = "(";
-            Class rclass = method.getReturnType();
-            long rtype, closure_rtype;
-            Class[] ptypes = method.getParameterTypes();
-            long[] atypes = new long[ptypes.length];
-            long[] closure_atypes = new long[ptypes.length];
-            int[] cvt = new int[ptypes.length];
-            ToNativeConverter[] toNative = new ToNativeConverter[ptypes.length];
-            FromNativeConverter fromNative = null;
-            int rcvt = getConversion(rclass, mapper);
-            boolean throwLastError = false;
-            switch (rcvt) {
-            case CVT_UNSUPPORTED:
-                throw new IllegalArgumentException(rclass + " is not a supported return type (in method " + method.getName() + " in " + cls + ")");
-            case CVT_TYPE_MAPPER:
-                fromNative = mapper.getFromNativeConverter(rclass);
-                closure_rtype = FFIType.get(rclass).peer;
-                rtype = FFIType.get(fromNative.nativeType()).peer;
-                break;
-            case CVT_NATIVE_MAPPED:
-            case CVT_INTEGER_TYPE:
-            case CVT_POINTER_TYPE:
-                closure_rtype = FFIType.get(Pointer.class).peer;
-                rtype = FFIType.get(NativeMappedConverter.getInstance(rclass).nativeType()).peer;
-                break;
-            case CVT_STRUCTURE:
-                closure_rtype = rtype = FFIType.get(Pointer.class).peer;
-                break;
-            case CVT_STRUCTURE_BYVAL:
-                closure_rtype = FFIType.get(Pointer.class).peer;
-                rtype = FFIType.get(rclass).peer;
-                break;
-            default:
-                closure_rtype = rtype = FFIType.get(rclass).peer;
-                break;
-            }
-            for (int t=0;t < ptypes.length;t++) {
-                Class type = ptypes[t];
-                sig += getSignature(type);
-                cvt[t] = getConversion(type, mapper);
-                if (cvt[t] == CVT_UNSUPPORTED) {
-                    throw new IllegalArgumentException(type + " is not a supported argument type (in method " + method.getName() + " in " + cls + ")");
-                }
-                if (cvt[t] == CVT_NATIVE_MAPPED
-                    || cvt[t] == CVT_INTEGER_TYPE) {
-                    type = NativeMappedConverter.getInstance(type).nativeType();
-                }
-                else if (cvt[t] == CVT_TYPE_MAPPER) {
-                    toNative[t] = mapper.getToNativeConverter(type);
-                }
-                // Determine the type that will be passed to the native
-                // function, as well as the type to be passed
-                // from Java initially
-                switch(cvt[t]) {
-                case CVT_STRUCTURE_BYVAL:
-                case CVT_INTEGER_TYPE:
-                case CVT_POINTER_TYPE:
-                case CVT_NATIVE_MAPPED:
-                    atypes[t] = FFIType.get(type).peer;
-                    closure_atypes[t] = FFIType.get(Pointer.class).peer;
-                    break;
-                case CVT_TYPE_MAPPER:
-                    if (type.isPrimitive())
-                        closure_atypes[t] = FFIType.get(type).peer;
-                    else
-                        closure_atypes[t] = FFIType.get(Pointer.class).peer;
-                    atypes[t] = FFIType.get(toNative[t].nativeType()).peer;
-                    break;
-                case CVT_DEFAULT:
-                    closure_atypes[t] = atypes[t] = FFIType.get(type).peer;
-                    break;
-                default:
-                    closure_atypes[t] = atypes[t] = FFIType.get(Pointer.class).peer;
-                    break;
-                }
-            }
-            sig += ")";
-            sig += getSignature(rclass);
-
-            Class[] etypes = method.getExceptionTypes();
-            for (int e=0;e < etypes.length;e++) {
-                if (LastErrorException.class.isAssignableFrom(etypes[e])) {
-                    throwLastError = true;
-                    break;
-                }
-            }
-
-            Function f = lib.getFunction(method.getName(), method);
-            try {
-                handles[i] = registerMethod(cls, method.getName(),
-                                            sig, cvt,
-                                            closure_atypes, atypes, rcvt,
-                                            closure_rtype, rtype,
-                                            rclass,
-                                            f.peer, f.getCallingConvention(),
-                                            throwLastError,
-                                            toNative, fromNative,
-                                            f.encoding);
-            }
-            catch(NoSuchMethodError e) {
-                throw new UnsatisfiedLinkError("No method " + method.getName() + " with signature " + sig + " in " + cls);
-            }
-        }
-        synchronized(registeredClasses) {
-            registeredClasses.put(cls, handles);
-            registeredLibraries.put(cls, lib);
-        }
-        cacheOptions(cls, lib.getOptions(), null);
+//        Method[] methods = cls.getDeclaredMethods();
+//        List mlist = new ArrayList();
+//        TypeMapper mapper = (TypeMapper)
+//            lib.getOptions().get(Library.OPTION_TYPE_MAPPER);
+//
+//        for (int i=0;i < methods.length;i++) {
+//            if ((methods[i].getModifiers() & Modifier.NATIVE) != 0) {
+//                mlist.add(methods[i]);
+//            }
+//        }
+//        long[] handles = new long[mlist.size()];
+//        for (int i=0;i < handles.length;i++) {
+//            Method method = (Method)mlist.get(i);
+//            String sig = "(";
+//            Class rclass = method.getReturnType();
+//            long rtype, closure_rtype;
+//            Class[] ptypes = method.getParameterTypes();
+//            long[] atypes = new long[ptypes.length];
+//            long[] closure_atypes = new long[ptypes.length];
+//            int[] cvt = new int[ptypes.length];
+//            ToNativeConverter[] toNative = new ToNativeConverter[ptypes.length];
+//            FromNativeConverter fromNative = null;
+//            int rcvt = getConversion(rclass, mapper);
+//            boolean throwLastError = false;
+//            switch (rcvt) {
+//            case CVT_UNSUPPORTED:
+//                throw new IllegalArgumentException(rclass + " is not a supported return type (in method " + method.getName() + " in " + cls + ")");
+//            case CVT_TYPE_MAPPER:
+//                fromNative = mapper.getFromNativeConverter(rclass);
+//                closure_rtype = FFIType.get(rclass).peer;
+//                rtype = FFIType.get(fromNative.nativeType()).peer;
+//                break;
+//            case CVT_NATIVE_MAPPED:
+//            case CVT_INTEGER_TYPE:
+//            case CVT_POINTER_TYPE:
+//                closure_rtype = FFIType.get(Pointer.class).peer;
+//                rtype = FFIType.get(NativeMappedConverter.getInstance(rclass).nativeType()).peer;
+//                break;
+//            case CVT_STRUCTURE:
+//                closure_rtype = rtype = FFIType.get(Pointer.class).peer;
+//                break;
+//            case CVT_STRUCTURE_BYVAL:
+//                closure_rtype = FFIType.get(Pointer.class).peer;
+//                rtype = FFIType.get(rclass).peer;
+//                break;
+//            default:
+//                closure_rtype = rtype = FFIType.get(rclass).peer;
+//                break;
+//            }
+//            for (int t=0;t < ptypes.length;t++) {
+//                Class type = ptypes[t];
+//                sig += getSignature(type);
+//                cvt[t] = getConversion(type, mapper);
+//                if (cvt[t] == CVT_UNSUPPORTED) {
+//                    throw new IllegalArgumentException(type + " is not a supported argument type (in method " + method.getName() + " in " + cls + ")");
+//                }
+//                if (cvt[t] == CVT_NATIVE_MAPPED
+//                    || cvt[t] == CVT_INTEGER_TYPE) {
+//                    type = NativeMappedConverter.getInstance(type).nativeType();
+//                }
+//                else if (cvt[t] == CVT_TYPE_MAPPER) {
+//                    toNative[t] = mapper.getToNativeConverter(type);
+//                }
+//                // Determine the type that will be passed to the native
+//                // function, as well as the type to be passed
+//                // from Java initially
+//                switch(cvt[t]) {
+//                case CVT_STRUCTURE_BYVAL:
+//                case CVT_INTEGER_TYPE:
+//                case CVT_POINTER_TYPE:
+//                case CVT_NATIVE_MAPPED:
+//                    atypes[t] = FFIType.get(type).peer;
+//                    closure_atypes[t] = FFIType.get(Pointer.class).peer;
+//                    break;
+//                case CVT_TYPE_MAPPER:
+//                    if (type.isPrimitive())
+//                        closure_atypes[t] = FFIType.get(type).peer;
+//                    else
+//                        closure_atypes[t] = FFIType.get(Pointer.class).peer;
+//                    atypes[t] = FFIType.get(toNative[t].nativeType()).peer;
+//                    break;
+//                case CVT_DEFAULT:
+//                    closure_atypes[t] = atypes[t] = FFIType.get(type).peer;
+//                    break;
+//                default:
+//                    closure_atypes[t] = atypes[t] = FFIType.get(Pointer.class).peer;
+//                    break;
+//                }
+//            }
+//            sig += ")";
+//            sig += getSignature(rclass);
+//
+//            Class[] etypes = method.getExceptionTypes();
+//            for (int e=0;e < etypes.length;e++) {
+//                if (LastErrorException.class.isAssignableFrom(etypes[e])) {
+//                    throwLastError = true;
+//                    break;
+//                }
+//            }
+//
+//            Function f = lib.getFunction(method.getName(), method);
+//            try {
+//                handles[i] = registerMethod(cls, method.getName(),
+//                                            sig, cvt,
+//                                            closure_atypes, atypes, rcvt,
+//                                            closure_rtype, rtype,
+//                                            rclass,
+//                                            f.peer, f.getCallingConvention(),
+//                                            throwLastError,
+//                                            toNative, fromNative,
+//                                            f.encoding);
+//            }
+//            catch(NoSuchMethodError e) {
+//                throw new UnsatisfiedLinkError("No method " + method.getName() + " with signature " + sig + " in " + cls);
+//            }
+//        }
+//        synchronized(registeredClasses) {
+//            registeredClasses.put(cls, handles);
+//            registeredLibraries.put(cls, lib);
+//        }
+//        cacheOptions(cls, lib.getOptions(), null);
     }
 
     /** Take note of options used for a given library mapping, to facilitate
@@ -1693,7 +1693,9 @@ public final class Native implements Version {
      * @return	The value returned by the target native function
      */
     static long invokeLong(String fp, int callFlags, Object[] args) {
-    	return ((Number)invoke(fp, args)).longValue();
+    	long result = ((Number)invoke(fp, args)).longValue() & 0xFFFFFFFFL;
+    	result |= ((Number)eval("Runtime.getTempRet0();")).longValue() << 32;
+    	return result;
     }
 
     /**
@@ -1769,8 +1771,7 @@ public final class Native implements Version {
      */
     static Structure invokeStructure(long fp, int callFlags, Object[] args,
                                      Structure s) {
-        invokeStructure(fp, callFlags, args, s.getPointer().peer,
-                        s.getTypeInfo().peer);
+        invokeStructure(fp, callFlags, args, s.getPointer().peer, 0);
         return s;
     }
 
@@ -1815,7 +1816,11 @@ public final class Native implements Version {
 
     static native long indexOf(long addr, byte value);
 
-    static native void read(long addr, byte[] buf, int index, int length);
+    static void read(long addr, byte[] buf, int index, int length) {
+    	for (int i = 0; i < length; i++) {
+    		buf[index + i] = getByte(addr + i);
+    	}
+    }
 
     static native void read(long addr, short[] buf, int index, int length);
 
@@ -1853,24 +1858,59 @@ public final class Native implements Version {
 
     static native char getChar(long addr);
 
-    static native short getShort(long addr);
+    static short getShort(long addr) {
+    	if (addr % 2 != 0) {
+    		throw new IllegalArgumentException();
+    	}
+    	return ((Number)eval("HEAP16[" + (addr / 2) + "];")).shortValue();
+    }
 
-    static native int getInt(long addr);
+    static int getInt(long addr) {
+    	if (addr % 4 != 0) {
+    		throw new IllegalArgumentException();
+    	}
+    	return ((Number)eval("HEAP32[" + (addr / 4) + "];")).intValue();
+    }
 
-    static native long getLong(long addr);
+    static long getLong(long addr) {
+    	if (addr % 4 != 0) {
+    		throw new IllegalArgumentException();
+    	}
+    	long result = ((Number)eval("HEAP32[" + (addr / 4) + "];")).longValue() & 0xFFFFFFFFL;
+    	result |= ((Number)eval("HEAP32[" + (addr / 4 + 1) + "];")).longValue() << 32;
+    	return result;
+    }
 
-    static native float getFloat(long addr);
+    static float getFloat(long addr) {
+    	return Float.intBitsToFloat(getInt(addr));
+    }
 
-    static native double getDouble(long addr);
+    static double getDouble(long addr) {
+    	return Double.longBitsToDouble(getLong(addr));
+    }
 
     static Pointer getPointer(long addr) {
         long peer = _getPointer(addr);
         return peer == 0 ? null : new Pointer(peer);
     }
 
-    private static native long _getPointer(long addr);
+    private static long _getPointer(long addr) {
+    	if (POINTER_SIZE != 4) {
+    		throw new IllegalStateException();
+    	}
+    	return getInt(addr);
+    }
 
-    static native String getWideString(long addr);
+    static String getWideString(long addr) {
+    	StringBuffer result = new StringBuffer();
+    	int index = 0;
+    	while (getByte(addr + index * WCHAR_SIZE) != 0) {
+    		long base = addr + index * WCHAR_SIZE;
+    		result.append((char)((getByte(base) & 0xFF) + ((getByte(base + 1) & 0xFF ) << 8)));
+    		index++;
+    	}
+    	return result.toString();
+    }
 
     static String getString(long addr) {
         return getString(addr, getDefaultStringEncoding());
@@ -1888,41 +1928,117 @@ public final class Native implements Version {
         return new String(data);
     }
 
-    static native byte[] getStringBytes(long addr);
-
-    static native void setMemory(long addr, long length, byte value);
-
-    static void setByte(long addr, byte value) {
-    	String script = "HEAP8[" + addr + "] = " + value + ";";
-    	eval(script);
+    static byte[] getStringBytes(long addr) {
+    	int length = 0;
+    	while(getByte(addr + length) != 0) {
+    		length++;
+    	}
+    	byte bytes[] = new byte[length];
+    	for (int i = 0; i < length; i++) {
+    		bytes[i] = getByte(addr + i);
+    	}
+    	return bytes;
     }
 
-    static native void setShort(long addr, short value);
+    static void setMemory(long addr, long length, byte value) {
+    	for (int i = 0; i < length; i++) {
+        	eval("HEAP8[" + (addr + i) + "] = " + value + ";");
+    	}
+    }
+
+    static void setByte(long addr, byte value) {
+    	eval("HEAP8[" + addr + "] = " + value + ";");
+    }
+
+    static void setShort(long addr, short value) {
+    	if (addr % 2 != 0) {
+    		throw new IllegalArgumentException();
+    	}
+    	eval("HEAP16[" + (addr / 2) + "] = " + value + ";");
+    }
 
     static native void setChar(long addr, char value);
 
-    static native void setInt(long addr, int value);
+    static void setInt(long addr, int value) {
+    	if (addr % 4 != 0) {
+    		throw new IllegalArgumentException();
+    	}
+    	eval("HEAP32[" + (addr / 4) + "] = " + value + ";");
+    }
 
-    static native void setLong(long addr, long value);
+    static void setLong(long addr, long value) {
+    	if (addr % 4 != 0) {
+    		throw new IllegalArgumentException();
+    	}
+    	eval("HEAP32[" + (addr / 4) + "] = " + (value & 0xFFFFFFFF) + ";");
+    	eval("HEAP32[" + (addr / 4 + 1) + "] = " + (value >> 32) + ";");
+    }
 
-    static native void setFloat(long addr, float value);
+    static void setFloat(long addr, float value) {
+    	setInt(addr, Float.floatToIntBits(value));
+    }
 
-    static native void setDouble(long addr, double value);
+    static void setDouble(long addr, double value) {
+    	setLong(addr, Double.doubleToLongBits(value));
+    }
 
-    static native void setPointer(long addr, long value);
+    static void setPointer(long addr, long value) {
+    	if (POINTER_SIZE != 4) {
+    		throw new IllegalStateException();
+    	}
+    	setInt(addr, (int)value);
+    }
 
-    static native void setWideString(long addr, String value);
+    static void setWideString(long addr, String value) {
+    	for (int i = 0; i < value.length(); i++) {
+    		char c = value.charAt(i);
+    		long base = addr + i * WCHAR_SIZE;
+    		setByte(base, (byte)c);
+    		setByte(base + 1, (byte)((int)c >> 8));
+    	}
+    	setByte(addr + value.length() * WCHAR_SIZE, (byte)0);
+    }
 
-    static Object invoke(String fp, Object[] args) {
+    static Object invoke(String functionName, Object[] arguments) {
     	try {
-    		for (int i = 0; i < args.length; i++) {
-    			Object argument = args[i];
+    		List<Object> convertedArguments = new ArrayList<>();
+    		Memory[] allocatedArguments = new Memory[arguments.length];
+    		for (int i = 0; i < arguments.length; i++) {
+    			Object argument = arguments[i];
     			if (argument instanceof Pointer) {
-    				args[i] = ((Pointer)argument).peer;
+    				convertedArguments.add(((Pointer)argument).peer);
+    			} else if (argument instanceof Structure) {
+        			convertedArguments.add(((Structure)argument).getPointer().peer);
+    			} else if (argument instanceof Character) {
+    				convertedArguments.add((short)((Character)argument).charValue());
+    			} else if (argument instanceof Long) {
+    				long value = (Long) argument;
+					convertedArguments.add(value & 0xffffffffL);
+    				convertedArguments.add(value >> 32);
+    			} else if (argument instanceof byte[]) {
+    				byte[] value = (byte[]) argument;
+    				Memory nativeMemory = new Memory(value.length);
+    				nativeMemory.write(0, value, 0, value.length);
+    				allocatedArguments[i] = nativeMemory;
+    				convertedArguments.add(nativeMemory.peer);
+    			} else {
+    				convertedArguments.add(argument);
     			}
     		}
-    		return ((Invocable)NativeLibrary.handle).invokeFunction(fp, args);
+    		
+    		Object result = ((Invocable)NativeLibrary.handle).invokeFunction(functionName, convertedArguments.toArray());
+    		
+    		for (int i = 0; i < arguments.length; i++) {
+    			Object argument = arguments[i];
+    			if (argument instanceof byte[]) {
+    				byte[] value = (byte[])argument;
+					allocatedArguments[i].read(0, value, 0, value.length);
+    			}
+    		}
+    		
+    		return result;
     	} catch (NoSuchMethodException | ScriptException e) {
+    		e.printStackTrace();
     		throw new UnsatisfiedLinkError();
     	}
     }

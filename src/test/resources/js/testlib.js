@@ -1610,27 +1610,6 @@ function copyTempDouble(ptr) {
 // {{PRE_LIBRARY}}
 
 
-  function _sbrk(bytes) {
-      // Implement a Linux-like 'memory area' for our 'process'.
-      // Changes the size of the memory area by |bytes|; returns the
-      // address of the previous top ('break') of the memory area
-      // We control the "dynamic" memory - DYNAMIC_BASE to DYNAMICTOP
-      var self = _sbrk;
-      if (!self.called) {
-        DYNAMICTOP = alignMemoryPage(DYNAMICTOP); // make sure we start out aligned
-        self.called = true;
-        assert(Runtime.dynamicAlloc);
-        self.alloc = Runtime.dynamicAlloc;
-        Runtime.dynamicAlloc = function() { abort('cannot dynamically allocate, sbrk now has control') };
-      }
-      var ret = DYNAMICTOP;
-      if (bytes != 0) {
-        var success = self.alloc(bytes);
-        if (!success) return -1 >>> 0; // sbrk failure code
-      }
-      return ret;  // Previous break location.
-    }
-
   
   
   var ___errno_state=0;function ___setErrNo(value) {
@@ -1783,6 +1762,9 @@ function copyTempDouble(ptr) {
       ___setErrNo(ERRNO_CODES.EINVAL);
       return -1;
     }
+
+   
+  Module["_i64Add"] = _i64Add;
 
    
   Module["_memset"] = _memset;
@@ -5215,6 +5197,27 @@ function copyTempDouble(ptr) {
         return handle;
       }};
 
+  function _sbrk(bytes) {
+      // Implement a Linux-like 'memory area' for our 'process'.
+      // Changes the size of the memory area by |bytes|; returns the
+      // address of the previous top ('break') of the memory area
+      // We control the "dynamic" memory - DYNAMIC_BASE to DYNAMICTOP
+      var self = _sbrk;
+      if (!self.called) {
+        DYNAMICTOP = alignMemoryPage(DYNAMICTOP); // make sure we start out aligned
+        self.called = true;
+        assert(Runtime.dynamicAlloc);
+        self.alloc = Runtime.dynamicAlloc;
+        Runtime.dynamicAlloc = function() { abort('cannot dynamically allocate, sbrk now has control') };
+      }
+      var ret = DYNAMICTOP;
+      if (bytes != 0) {
+        var success = self.alloc(bytes);
+        if (!success) return -1 >>> 0; // sbrk failure code
+      }
+      return ret;  // Previous break location.
+    }
+
   function _time(ptr) {
       var ret = (Date.now()/1000)|0;
       if (ptr) {
@@ -5253,10 +5256,11 @@ DYNAMIC_BASE = DYNAMICTOP = Runtime.alignMemory(STACK_MAX);
 
 assert(DYNAMIC_BASE < TOTAL_MEMORY, "TOTAL_MEMORY not big enough for stack");
 
+ var cttz_i8 = allocate([8,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,6,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,7,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,6,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,5,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0,4,0,1,0,2,0,1,0,3,0,1,0,2,0,1,0], "i8", ALLOC_DYNAMIC);
 
 
 Module.asmGlobalArg = { "Math": Math, "Int8Array": Int8Array, "Int16Array": Int16Array, "Int32Array": Int32Array, "Uint8Array": Uint8Array, "Uint16Array": Uint16Array, "Uint32Array": Uint32Array, "Float32Array": Float32Array, "Float64Array": Float64Array, "NaN": NaN, "Infinity": Infinity };
-Module.asmLibraryArg = { "abort": abort, "assert": assert, "_fflush": _fflush, "_sysconf": _sysconf, "_abort": _abort, "___setErrNo": ___setErrNo, "_sbrk": _sbrk, "_time": _time, "_emscripten_set_main_loop_timing": _emscripten_set_main_loop_timing, "_emscripten_memcpy_big": _emscripten_memcpy_big, "_emscripten_set_main_loop": _emscripten_set_main_loop, "___errno_location": ___errno_location, "STACKTOP": STACKTOP, "STACK_MAX": STACK_MAX, "tempDoublePtr": tempDoublePtr, "ABORT": ABORT };
+Module.asmLibraryArg = { "abort": abort, "assert": assert, "_fflush": _fflush, "_sysconf": _sysconf, "_abort": _abort, "___setErrNo": ___setErrNo, "_sbrk": _sbrk, "_time": _time, "_emscripten_set_main_loop_timing": _emscripten_set_main_loop_timing, "_emscripten_memcpy_big": _emscripten_memcpy_big, "_emscripten_set_main_loop": _emscripten_set_main_loop, "___errno_location": ___errno_location, "STACKTOP": STACKTOP, "STACK_MAX": STACK_MAX, "tempDoublePtr": tempDoublePtr, "ABORT": ABORT, "cttz_i8": cttz_i8 };
 // EMSCRIPTEN_START_ASM
 var asm = (function(global, env, buffer) {
   'almost asm';
@@ -5275,6 +5279,7 @@ var asm = (function(global, env, buffer) {
   var STACK_MAX=env.STACK_MAX|0;
   var tempDoublePtr=env.tempDoublePtr|0;
   var ABORT=env.ABORT|0;
+  var cttz_i8=env.cttz_i8|0;
 
   var __THREW__ = 0;
   var threwValue = 0;
@@ -5384,6 +5389,42 @@ function getTempRet0() {
   return tempRet0|0;
 }
 
+function _returnBooleanArgument($arg) {
+ $arg = $arg|0;
+ var $0 = 0, $1 = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $arg;
+ $1 = $0;
+ STACKTOP = sp;return ($1|0);
+}
+function _returnInt8Argument($arg) {
+ $arg = $arg|0;
+ var $0 = 0, $1 = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $arg;
+ $1 = $0;
+ STACKTOP = sp;return ($1|0);
+}
+function _returnWideCharArgument($arg) {
+ $arg = $arg|0;
+ var $0 = 0, $1 = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $arg;
+ $1 = $0;
+ STACKTOP = sp;return ($1|0);
+}
+function _returnInt16Argument($arg) {
+ $arg = $arg|0;
+ var $0 = 0, $1 = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $arg;
+ $1 = $0;
+ STACKTOP = sp;return ($1|0);
+}
 function _returnInt32Argument($arg) {
  $arg = $arg|0;
  var $0 = 0, $1 = 0, label = 0, sp = 0;
@@ -5392,6 +5433,637 @@ function _returnInt32Argument($arg) {
  $0 = $arg;
  $1 = $0;
  STACKTOP = sp;return ($1|0);
+}
+function _returnInt64Argument($0,$1) {
+ $0 = $0|0;
+ $1 = $1|0;
+ var $10 = 0, $11 = 0, $12 = 0, $2 = 0, $3 = 0, $4 = 0, $5 = 0, $6 = 0, $7 = 0, $8 = 0, $9 = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $2 = sp;
+ $3 = $2;
+ $4 = $3;
+ HEAP32[$4>>2] = $0;
+ $5 = (($3) + 4)|0;
+ $6 = $5;
+ HEAP32[$6>>2] = $1;
+ $7 = $2;
+ $8 = $7;
+ $9 = HEAP32[$8>>2]|0;
+ $10 = (($7) + 4)|0;
+ $11 = $10;
+ $12 = HEAP32[$11>>2]|0;
+ tempRet0 = ($12);
+ STACKTOP = sp;return ($9|0);
+}
+function _returnLongArgument($arg) {
+ $arg = $arg|0;
+ var $0 = 0, $1 = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $arg;
+ $1 = $0;
+ STACKTOP = sp;return ($1|0);
+}
+function _returnPointerArgument($arg) {
+ $arg = $arg|0;
+ var $0 = 0, $1 = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $arg;
+ $1 = $0;
+ STACKTOP = sp;return ($1|0);
+}
+function _returnStringArgument($arg) {
+ $arg = $arg|0;
+ var $0 = 0, $1 = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $arg;
+ $1 = $0;
+ STACKTOP = sp;return ($1|0);
+}
+function _returnWStringArgument($arg) {
+ $arg = $arg|0;
+ var $0 = 0, $1 = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $arg;
+ $1 = $0;
+ STACKTOP = sp;return ($1|0);
+}
+function _checkInt64ArgumentAlignment($i,$0,$1,$i2,$2,$3) {
+ $i = $i|0;
+ $0 = $0|0;
+ $1 = $1|0;
+ $i2 = $i2|0;
+ $2 = $2|0;
+ $3 = $3|0;
+ var $10 = 0, $11 = 0, $12 = 0, $13 = 0, $14 = 0, $15 = 0, $16 = 0, $17 = 0, $18 = 0, $19 = 0, $20 = 0, $21 = 0, $22 = 0, $23 = 0, $24 = 0, $25 = 0, $26 = 0, $27 = 0, $28 = 0, $29 = 0;
+ var $30 = 0, $31 = 0, $32 = 0, $33 = 0, $34 = 0, $35 = 0, $36 = 0, $37 = 0, $38 = 0, $39 = 0, $4 = 0, $40 = 0, $41 = 0, $42 = 0, $43 = 0, $44 = 0, $45 = 0, $46 = 0, $47 = 0, $48 = 0;
+ var $49 = 0, $5 = 0, $50 = 0, $51 = 0, $52 = 0, $53 = 0, $54 = 0, $55 = 0, $56 = 0, $57 = 0, $58 = 0, $59 = 0, $6 = 0, $60 = 0, $61 = 0, $62 = 0, $63 = 0, $64 = 0, $65 = 0, $66 = 0;
+ var $67 = 0, $68 = 0, $69 = 0, $7 = 0, $70 = 0, $71 = 0, $72 = 0, $73 = 0, $74 = 0, $75 = 0, $76 = 0, $77 = 0, $78 = 0, $79 = 0, $8 = 0, $80 = 0, $81 = 0, $82 = 0, $83 = 0, $84 = 0;
+ var $85 = 0, $86 = 0, $87 = 0, $88 = 0, $9 = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 32|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $4 = sp + 16|0;
+ $6 = sp + 8|0;
+ $8 = sp;
+ $5 = $i;
+ $9 = $6;
+ $10 = $9;
+ HEAP32[$10>>2] = $0;
+ $11 = (($9) + 4)|0;
+ $12 = $11;
+ HEAP32[$12>>2] = $1;
+ $7 = $i2;
+ $13 = $8;
+ $14 = $13;
+ HEAP32[$14>>2] = $2;
+ $15 = (($13) + 4)|0;
+ $16 = $15;
+ HEAP32[$16>>2] = $3;
+ $17 = $5;
+ $18 = ($17|0)!=(269488144);
+ do {
+  if ($18) {
+   $19 = $4;
+   $20 = $19;
+   HEAP32[$20>>2] = -1;
+   $21 = (($19) + 4)|0;
+   $22 = $21;
+   HEAP32[$22>>2] = -1;
+  } else {
+   $23 = $6;
+   $24 = $23;
+   $25 = HEAP32[$24>>2]|0;
+   $26 = (($23) + 4)|0;
+   $27 = $26;
+   $28 = HEAP32[$27>>2]|0;
+   $29 = ($25|0)!=(286331153);
+   $30 = ($28|0)!=(286331153);
+   $31 = $29 | $30;
+   if ($31) {
+    $32 = $4;
+    $33 = $32;
+    HEAP32[$33>>2] = -2;
+    $34 = (($32) + 4)|0;
+    $35 = $34;
+    HEAP32[$35>>2] = -1;
+    break;
+   }
+   $36 = $7;
+   $37 = ($36|0)!=(16843009);
+   if ($37) {
+    $38 = $4;
+    $39 = $38;
+    HEAP32[$39>>2] = -3;
+    $40 = (($38) + 4)|0;
+    $41 = $40;
+    HEAP32[$41>>2] = -1;
+    break;
+   }
+   $42 = $8;
+   $43 = $42;
+   $44 = HEAP32[$43>>2]|0;
+   $45 = (($42) + 4)|0;
+   $46 = $45;
+   $47 = HEAP32[$46>>2]|0;
+   $48 = ($44|0)!=(572662306);
+   $49 = ($47|0)!=(572662306);
+   $50 = $48 | $49;
+   if ($50) {
+    $51 = $4;
+    $52 = $51;
+    HEAP32[$52>>2] = -4;
+    $53 = (($51) + 4)|0;
+    $54 = $53;
+    HEAP32[$54>>2] = -1;
+    break;
+   } else {
+    $55 = $5;
+    $56 = ($55|0)<(0);
+    $57 = $56 << 31 >> 31;
+    $58 = $6;
+    $59 = $58;
+    $60 = HEAP32[$59>>2]|0;
+    $61 = (($58) + 4)|0;
+    $62 = $61;
+    $63 = HEAP32[$62>>2]|0;
+    $64 = (_i64Add(($55|0),($57|0),($60|0),($63|0))|0);
+    $65 = tempRet0;
+    $66 = $7;
+    $67 = ($66|0)<(0);
+    $68 = $67 << 31 >> 31;
+    $69 = (_i64Add(($64|0),($65|0),($66|0),($68|0))|0);
+    $70 = tempRet0;
+    $71 = $8;
+    $72 = $71;
+    $73 = HEAP32[$72>>2]|0;
+    $74 = (($71) + 4)|0;
+    $75 = $74;
+    $76 = HEAP32[$75>>2]|0;
+    $77 = (_i64Add(($69|0),($70|0),($73|0),($76|0))|0);
+    $78 = tempRet0;
+    $79 = $4;
+    $80 = $79;
+    HEAP32[$80>>2] = $77;
+    $81 = (($79) + 4)|0;
+    $82 = $81;
+    HEAP32[$82>>2] = $78;
+    break;
+   }
+  }
+ } while(0);
+ $83 = $4;
+ $84 = $83;
+ $85 = HEAP32[$84>>2]|0;
+ $86 = (($83) + 4)|0;
+ $87 = $86;
+ $88 = HEAP32[$87>>2]|0;
+ tempRet0 = ($88);
+ STACKTOP = sp;return ($85|0);
+}
+function _checkDoubleArgumentAlignment($f,$d,$f2,$d2) {
+ $f = +$f;
+ $d = +$d;
+ $f2 = +$f2;
+ $d2 = +$d2;
+ var $0 = 0.0, $1 = 0.0, $10 = 0, $11 = 0.0, $12 = 0, $13 = 0.0, $14 = 0.0, $15 = 0.0, $16 = 0.0, $17 = 0.0, $18 = 0.0, $19 = 0.0, $2 = 0.0, $20 = 0.0, $21 = 0.0, $22 = 0.0, $3 = 0.0, $4 = 0.0, $5 = 0.0, $6 = 0;
+ var $7 = 0.0, $8 = 0, $9 = 0.0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 32|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $1 = $f;
+ $2 = $d;
+ $3 = $f2;
+ $4 = $d2;
+ $5 = $1;
+ $6 = $5 != 1.0;
+ do {
+  if ($6) {
+   $0 = -1.0;
+  } else {
+   $7 = $2;
+   $8 = $7 != 2.0;
+   if ($8) {
+    $0 = -2.0;
+    break;
+   }
+   $9 = $3;
+   $10 = $9 != 3.0;
+   if ($10) {
+    $0 = -3.0;
+    break;
+   }
+   $11 = $4;
+   $12 = $11 != 4.0;
+   if ($12) {
+    $0 = -4.0;
+    break;
+   } else {
+    $13 = $1;
+    $14 = $13;
+    $15 = $2;
+    $16 = $14 + $15;
+    $17 = $3;
+    $18 = $17;
+    $19 = $16 + $18;
+    $20 = $4;
+    $21 = $19 + $20;
+    $0 = $21;
+    break;
+   }
+  }
+ } while(0);
+ $22 = $0;
+ STACKTOP = sp;return (+$22);
+}
+function _testStructurePointerArgument($arg) {
+ $arg = $arg|0;
+ var $0 = 0, $1 = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $arg;
+ $1 = $0;
+ STACKTOP = sp;return ($1|0);
+}
+function _testStructureByValueArgument($arg) {
+ $arg = $arg|0;
+ var $0 = 0, $1 = 0, $10 = 0, $11 = 0, $12 = 0, $13 = 0, $14 = 0, $15 = 0, $16 = 0, $17 = 0, $18 = 0, $19 = 0, $2 = 0, $20 = 0, $21 = 0, $22 = 0, $23 = 0, $24 = 0, $25 = 0, $26 = 0;
+ var $27 = 0, $28 = 0, $29 = 0, $3 = 0, $30 = 0, $31 = 0, $32 = 0, $33 = 0, $34 = 0, $35 = 0, $36 = 0, $37 = 0, $38 = 0, $39 = 0, $4 = 0, $40 = 0, $41 = 0, $42 = 0, $43 = 0, $44 = 0;
+ var $45 = 0, $46 = 0, $47 = 0, $48 = 0, $49 = 0, $5 = 0, $50 = 0, $51 = 0, $52 = 0, $53 = 0, $54 = 0, $55 = 0, $56 = 0, $57 = 0, $58 = 0, $59 = 0, $6 = 0, $60 = 0, $61 = 0, $62 = 0;
+ var $63 = 0, $64 = 0, $65 = 0.0, $66 = 0, $67 = 0.0, $68 = 0, $69 = 0, $7 = 0, $70 = 0, $71 = 0, $72 = 0, $73 = 0, $74 = 0, $75 = 0, $76 = 0, $77 = 0, $78 = 0.0, $79 = 0, $8 = 0, $80 = 0.0;
+ var $81 = 0, $82 = 0, $83 = 0, $84 = 0, $9 = 0, $base = 0, $offset = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $base = 0;
+ $1 = $base;
+ $2 = $base;
+ $3 = $1;
+ $4 = $2;
+ $5 = (($3) - ($4))|0;
+ $offset = $5;
+ $6 = HEAP8[$arg>>0]|0;
+ $7 = $6 << 24 >> 24;
+ $8 = $offset;
+ $9 = ($7|0)!=($8|0);
+ if ($9) {
+  $10 = $offset;
+  $11 = $10 | 256;
+  $0 = $11;
+  $84 = $0;
+  STACKTOP = sp;return ($84|0);
+ }
+ $12 = $base;
+ $13 = ((($12)) + 2|0);
+ $14 = $base;
+ $15 = $13;
+ $16 = $14;
+ $17 = (($15) - ($16))|0;
+ $offset = $17;
+ $18 = ((($arg)) + 2|0);
+ $19 = HEAP16[$18>>1]|0;
+ $20 = $19 << 16 >> 16;
+ $21 = $offset;
+ $22 = ($20|0)!=($21|0);
+ if ($22) {
+  $23 = $offset;
+  $24 = $23 | 512;
+  $0 = $24;
+  $84 = $0;
+  STACKTOP = sp;return ($84|0);
+ }
+ $25 = $base;
+ $26 = ((($25)) + 4|0);
+ $27 = $base;
+ $28 = $26;
+ $29 = $27;
+ $30 = (($28) - ($29))|0;
+ $offset = $30;
+ $31 = ((($arg)) + 4|0);
+ $32 = HEAP32[$31>>2]|0;
+ $33 = $offset;
+ $34 = ($32|0)!=($33|0);
+ if ($34) {
+  $35 = $offset;
+  $36 = $35 | 768;
+  $0 = $36;
+  $84 = $0;
+  STACKTOP = sp;return ($84|0);
+ }
+ $37 = $base;
+ $38 = ((($37)) + 8|0);
+ $39 = $base;
+ $40 = $38;
+ $41 = $39;
+ $42 = (($40) - ($41))|0;
+ $offset = $42;
+ $43 = ((($arg)) + 8|0);
+ $44 = $43;
+ $45 = $44;
+ $46 = HEAP32[$45>>2]|0;
+ $47 = (($44) + 4)|0;
+ $48 = $47;
+ $49 = HEAP32[$48>>2]|0;
+ $50 = $offset;
+ $51 = ($50|0)<(0);
+ $52 = $51 << 31 >> 31;
+ $53 = ($46|0)!=($50|0);
+ $54 = ($49|0)!=($52|0);
+ $55 = $53 | $54;
+ if ($55) {
+  $56 = $offset;
+  $57 = $56 | 1024;
+  $0 = $57;
+  $84 = $0;
+  STACKTOP = sp;return ($84|0);
+ }
+ $58 = $base;
+ $59 = ((($58)) + 16|0);
+ $60 = $base;
+ $61 = $59;
+ $62 = $60;
+ $63 = (($61) - ($62))|0;
+ $offset = $63;
+ $64 = ((($arg)) + 16|0);
+ $65 = +HEAPF32[$64>>2];
+ $66 = $offset;
+ $67 = (+($66|0));
+ $68 = $65 != $67;
+ if ($68) {
+  $69 = $offset;
+  $70 = $69 | 1280;
+  $0 = $70;
+  $84 = $0;
+  STACKTOP = sp;return ($84|0);
+ }
+ $71 = $base;
+ $72 = ((($71)) + 24|0);
+ $73 = $base;
+ $74 = $72;
+ $75 = $73;
+ $76 = (($74) - ($75))|0;
+ $offset = $76;
+ $77 = ((($arg)) + 24|0);
+ $78 = +HEAPF64[$77>>3];
+ $79 = $offset;
+ $80 = (+($79|0));
+ $81 = $78 != $80;
+ if ($81) {
+  $82 = $offset;
+  $83 = $82 | 1536;
+  $0 = $83;
+  $84 = $0;
+  STACKTOP = sp;return ($84|0);
+ } else {
+  $0 = 0;
+  $84 = $0;
+  STACKTOP = sp;return ($84|0);
+ }
+ return (0)|0;
+}
+function _testStructureArrayInitialization($arg,$len) {
+ $arg = $arg|0;
+ $len = $len|0;
+ var $0 = 0, $1 = 0, $10 = 0, $11 = 0, $12 = 0, $13 = 0, $14 = 0, $15 = 0, $2 = 0, $3 = 0, $4 = 0, $5 = 0, $6 = 0, $7 = 0, $8 = 0, $9 = 0, $i = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $1 = $arg;
+ $2 = $len;
+ $i = 0;
+ while(1) {
+  $3 = $i;
+  $4 = $2;
+  $5 = ($3|0)<($4|0);
+  if (!($5)) {
+   label = 6;
+   break;
+  }
+  $6 = $i;
+  $7 = $1;
+  $8 = (($7) + ($6<<5)|0);
+  $9 = ((($8)) + 4|0);
+  $10 = HEAP32[$9>>2]|0;
+  $11 = $i;
+  $12 = ($10|0)!=($11|0);
+  $13 = $i;
+  if ($12) {
+   label = 4;
+   break;
+  }
+  $14 = (($13) + 1)|0;
+  $i = $14;
+ }
+ if ((label|0) == 4) {
+  $0 = $13;
+  $15 = $0;
+  STACKTOP = sp;return ($15|0);
+ }
+ else if ((label|0) == 6) {
+  $0 = -1;
+  $15 = $0;
+  STACKTOP = sp;return ($15|0);
+ }
+ return (0)|0;
+}
+function _modifyStructureArray($arg,$length) {
+ $arg = $arg|0;
+ $length = $length|0;
+ var $0 = 0, $1 = 0, $10 = 0, $11 = 0, $12 = 0, $13 = 0, $14 = 0, $15 = 0, $16 = 0, $17 = 0, $18 = 0, $19 = 0, $2 = 0, $20 = 0, $21 = 0, $22 = 0, $23 = 0.0, $24 = 0.0, $25 = 0, $26 = 0;
+ var $27 = 0, $28 = 0, $29 = 0, $3 = 0, $30 = 0.0, $31 = 0.0, $32 = 0, $33 = 0, $34 = 0, $35 = 0, $36 = 0, $37 = 0, $4 = 0, $5 = 0, $6 = 0, $7 = 0, $8 = 0, $9 = 0, $i = 0, label = 0;
+ var sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $arg;
+ $1 = $length;
+ $i = 0;
+ while(1) {
+  $2 = $i;
+  $3 = $1;
+  $4 = ($2|0)<($3|0);
+  if (!($4)) {
+   break;
+  }
+  $5 = $i;
+  $6 = $i;
+  $7 = $0;
+  $8 = (($7) + ($6<<5)|0);
+  $9 = ((($8)) + 4|0);
+  HEAP32[$9>>2] = $5;
+  $10 = $i;
+  $11 = (($10) + 1)|0;
+  $12 = ($11|0)<(0);
+  $13 = $12 << 31 >> 31;
+  $14 = $i;
+  $15 = $0;
+  $16 = (($15) + ($14<<5)|0);
+  $17 = ((($16)) + 8|0);
+  $18 = $17;
+  $19 = $18;
+  HEAP32[$19>>2] = $11;
+  $20 = (($18) + 4)|0;
+  $21 = $20;
+  HEAP32[$21>>2] = $13;
+  $22 = $i;
+  $23 = (+($22|0));
+  $24 = $23 + 2.0;
+  $25 = $i;
+  $26 = $0;
+  $27 = (($26) + ($25<<5)|0);
+  $28 = ((($27)) + 16|0);
+  HEAPF32[$28>>2] = $24;
+  $29 = $i;
+  $30 = (+($29|0));
+  $31 = $30 + 3.0;
+  $32 = $i;
+  $33 = $0;
+  $34 = (($33) + ($32<<5)|0);
+  $35 = ((($34)) + 24|0);
+  HEAPF64[$35>>3] = $31;
+  $36 = $i;
+  $37 = (($36) + 1)|0;
+  $i = $37;
+ }
+ STACKTOP = sp;return;
+}
+function _testStructureByReferenceArrayInitialization($arg,$len) {
+ $arg = $arg|0;
+ $len = $len|0;
+ var $0 = 0, $1 = 0, $10 = 0, $11 = 0, $12 = 0, $13 = 0, $14 = 0, $15 = 0, $16 = 0, $2 = 0, $3 = 0, $4 = 0, $5 = 0, $6 = 0, $7 = 0, $8 = 0, $9 = 0, $i = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $1 = $arg;
+ $2 = $len;
+ $i = 0;
+ while(1) {
+  $3 = $i;
+  $4 = $2;
+  $5 = ($3|0)<($4|0);
+  if (!($5)) {
+   label = 6;
+   break;
+  }
+  $6 = $i;
+  $7 = $1;
+  $8 = (($7) + ($6<<2)|0);
+  $9 = HEAP32[$8>>2]|0;
+  $10 = ((($9)) + 4|0);
+  $11 = HEAP32[$10>>2]|0;
+  $12 = $i;
+  $13 = ($11|0)!=($12|0);
+  $14 = $i;
+  if ($13) {
+   label = 4;
+   break;
+  }
+  $15 = (($14) + 1)|0;
+  $i = $15;
+ }
+ if ((label|0) == 4) {
+  $0 = $14;
+  $16 = $0;
+  STACKTOP = sp;return ($16|0);
+ }
+ else if ((label|0) == 6) {
+  $0 = -1;
+  $16 = $0;
+  STACKTOP = sp;return ($16|0);
+ }
+ return (0)|0;
+}
+function _modifyStructureByReferenceArray($arg,$length) {
+ $arg = $arg|0;
+ $length = $length|0;
+ var $0 = 0, $1 = 0, $10 = 0, $11 = 0, $12 = 0, $13 = 0, $14 = 0, $15 = 0, $16 = 0, $17 = 0, $18 = 0, $19 = 0, $2 = 0, $20 = 0, $21 = 0, $22 = 0, $23 = 0, $24 = 0, $25 = 0.0, $26 = 0.0;
+ var $27 = 0, $28 = 0, $29 = 0, $3 = 0, $30 = 0, $31 = 0, $32 = 0, $33 = 0.0, $34 = 0.0, $35 = 0, $36 = 0, $37 = 0, $38 = 0, $39 = 0, $4 = 0, $40 = 0, $41 = 0, $5 = 0, $6 = 0, $7 = 0;
+ var $8 = 0, $9 = 0, $i = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $arg;
+ $1 = $length;
+ $i = 0;
+ while(1) {
+  $2 = $i;
+  $3 = $1;
+  $4 = ($2|0)<($3|0);
+  if (!($4)) {
+   break;
+  }
+  $5 = $i;
+  $6 = $i;
+  $7 = $0;
+  $8 = (($7) + ($6<<2)|0);
+  $9 = HEAP32[$8>>2]|0;
+  $10 = ((($9)) + 4|0);
+  HEAP32[$10>>2] = $5;
+  $11 = $i;
+  $12 = (($11) + 1)|0;
+  $13 = ($12|0)<(0);
+  $14 = $13 << 31 >> 31;
+  $15 = $i;
+  $16 = $0;
+  $17 = (($16) + ($15<<2)|0);
+  $18 = HEAP32[$17>>2]|0;
+  $19 = ((($18)) + 8|0);
+  $20 = $19;
+  $21 = $20;
+  HEAP32[$21>>2] = $12;
+  $22 = (($20) + 4)|0;
+  $23 = $22;
+  HEAP32[$23>>2] = $14;
+  $24 = $i;
+  $25 = (+($24|0));
+  $26 = $25 + 2.0;
+  $27 = $i;
+  $28 = $0;
+  $29 = (($28) + ($27<<2)|0);
+  $30 = HEAP32[$29>>2]|0;
+  $31 = ((($30)) + 16|0);
+  HEAPF32[$31>>2] = $26;
+  $32 = $i;
+  $33 = (+($32|0));
+  $34 = $33 + 3.0;
+  $35 = $i;
+  $36 = $0;
+  $37 = (($36) + ($35<<2)|0);
+  $38 = HEAP32[$37>>2]|0;
+  $39 = ((($38)) + 24|0);
+  HEAPF64[$39>>3] = $34;
+  $40 = $i;
+  $41 = (($40) + 1)|0;
+  $i = $41;
+ }
+ STACKTOP = sp;return;
+}
+function _fillInt8Buffer($buf,$len,$value) {
+ $buf = $buf|0;
+ $len = $len|0;
+ $value = $value|0;
+ var $0 = 0, $1 = 0, $10 = 0, $11 = 0, $12 = 0, $2 = 0, $3 = 0, $4 = 0, $5 = 0, $6 = 0, $7 = 0, $8 = 0, $9 = 0, $i = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $buf;
+ $1 = $len;
+ $2 = $value;
+ $i = 0;
+ while(1) {
+  $3 = $i;
+  $4 = $1;
+  $5 = ($3|0)<($4|0);
+  if (!($5)) {
+   break;
+  }
+  $6 = $2;
+  $7 = $i;
+  $8 = $0;
+  $9 = (($8) + ($7)|0);
+  HEAP8[$9>>0] = $6;
+  $10 = $i;
+  $11 = (($10) + 1)|0;
+  $i = $11;
+ }
+ $12 = $1;
+ STACKTOP = sp;return ($12|0);
 }
 function _malloc($bytes) {
  $bytes = $bytes|0;
@@ -8648,6 +9320,18 @@ function _free($mem) {
 function runPostSets() {
 
 }
+function _i64Add(a, b, c, d) {
+    /*
+      x = a + b*2^32
+      y = c + d*2^32
+      result = l + h*2^32
+    */
+    a = a|0; b = b|0; c = c|0; d = d|0;
+    var l = 0, h = 0;
+    l = (a + c)>>>0;
+    h = (b + d + (((l>>>0) < (a>>>0))|0))>>>0; // Add carry from low word to high word on overflow.
+    return ((tempRet0 = h,l|0)|0);
+}
 function _memset(ptr, value, num) {
     ptr = ptr|0; value = value|0; num = num|0;
     var stop = 0, value4 = 0, stop4 = 0, unaligned = 0;
@@ -8713,6 +9397,359 @@ function _memcpy(dest, src, num) {
     }
     return ret|0;
 }
+function _i64Subtract(a, b, c, d) {
+    a = a|0; b = b|0; c = c|0; d = d|0;
+    var l = 0, h = 0;
+    l = (a - c)>>>0;
+    h = (b - d)>>>0;
+    h = (b - d - (((c>>>0) > (a>>>0))|0))>>>0; // Borrow one from high word to low word on underflow.
+    return ((tempRet0 = h,l|0)|0);
+  }
+function _bitshift64Shl(low, high, bits) {
+    low = low|0; high = high|0; bits = bits|0;
+    var ander = 0;
+    if ((bits|0) < 32) {
+      ander = ((1 << bits) - 1)|0;
+      tempRet0 = (high << bits) | ((low&(ander << (32 - bits))) >>> (32 - bits));
+      return low << bits;
+    }
+    tempRet0 = low << (bits - 32);
+    return 0;
+  }
+function _bitshift64Lshr(low, high, bits) {
+    low = low|0; high = high|0; bits = bits|0;
+    var ander = 0;
+    if ((bits|0) < 32) {
+      ander = ((1 << bits) - 1)|0;
+      tempRet0 = high >>> bits;
+      return (low >>> bits) | ((high&ander) << (32 - bits));
+    }
+    tempRet0 = 0;
+    return (high >>> (bits - 32))|0;
+  }
+function _bitshift64Ashr(low, high, bits) {
+    low = low|0; high = high|0; bits = bits|0;
+    var ander = 0;
+    if ((bits|0) < 32) {
+      ander = ((1 << bits) - 1)|0;
+      tempRet0 = high >> bits;
+      return (low >>> bits) | ((high&ander) << (32 - bits));
+    }
+    tempRet0 = (high|0) < 0 ? -1 : 0;
+    return (high >> (bits - 32))|0;
+  }
+function _llvm_cttz_i32(x) {
+    x = x|0;
+    var ret = 0;
+    ret = ((HEAP8[(((cttz_i8)+(x & 0xff))>>0)])|0);
+    if ((ret|0) < 8) return ret|0;
+    ret = ((HEAP8[(((cttz_i8)+((x >> 8)&0xff))>>0)])|0);
+    if ((ret|0) < 8) return (ret + 8)|0;
+    ret = ((HEAP8[(((cttz_i8)+((x >> 16)&0xff))>>0)])|0);
+    if ((ret|0) < 8) return (ret + 16)|0;
+    return (((HEAP8[(((cttz_i8)+(x >>> 24))>>0)])|0) + 24)|0;
+  }
+
+// ======== compiled code from system/lib/compiler-rt , see readme therein
+function ___muldsi3($a, $b) {
+  $a = $a | 0;
+  $b = $b | 0;
+  var $1 = 0, $2 = 0, $3 = 0, $6 = 0, $8 = 0, $11 = 0, $12 = 0;
+  $1 = $a & 65535;
+  $2 = $b & 65535;
+  $3 = Math_imul($2, $1) | 0;
+  $6 = $a >>> 16;
+  $8 = ($3 >>> 16) + (Math_imul($2, $6) | 0) | 0;
+  $11 = $b >>> 16;
+  $12 = Math_imul($11, $1) | 0;
+  return (tempRet0 = (($8 >>> 16) + (Math_imul($11, $6) | 0) | 0) + ((($8 & 65535) + $12 | 0) >>> 16) | 0, 0 | ($8 + $12 << 16 | $3 & 65535)) | 0;
+}
+function ___divdi3($a$0, $a$1, $b$0, $b$1) {
+  $a$0 = $a$0 | 0;
+  $a$1 = $a$1 | 0;
+  $b$0 = $b$0 | 0;
+  $b$1 = $b$1 | 0;
+  var $1$0 = 0, $1$1 = 0, $2$0 = 0, $2$1 = 0, $4$0 = 0, $4$1 = 0, $6$0 = 0, $7$0 = 0, $7$1 = 0, $8$0 = 0, $10$0 = 0;
+  $1$0 = $a$1 >> 31 | (($a$1 | 0) < 0 ? -1 : 0) << 1;
+  $1$1 = (($a$1 | 0) < 0 ? -1 : 0) >> 31 | (($a$1 | 0) < 0 ? -1 : 0) << 1;
+  $2$0 = $b$1 >> 31 | (($b$1 | 0) < 0 ? -1 : 0) << 1;
+  $2$1 = (($b$1 | 0) < 0 ? -1 : 0) >> 31 | (($b$1 | 0) < 0 ? -1 : 0) << 1;
+  $4$0 = _i64Subtract($1$0 ^ $a$0, $1$1 ^ $a$1, $1$0, $1$1) | 0;
+  $4$1 = tempRet0;
+  $6$0 = _i64Subtract($2$0 ^ $b$0, $2$1 ^ $b$1, $2$0, $2$1) | 0;
+  $7$0 = $2$0 ^ $1$0;
+  $7$1 = $2$1 ^ $1$1;
+  $8$0 = ___udivmoddi4($4$0, $4$1, $6$0, tempRet0, 0) | 0;
+  $10$0 = _i64Subtract($8$0 ^ $7$0, tempRet0 ^ $7$1, $7$0, $7$1) | 0;
+  return $10$0 | 0;
+}
+function ___remdi3($a$0, $a$1, $b$0, $b$1) {
+  $a$0 = $a$0 | 0;
+  $a$1 = $a$1 | 0;
+  $b$0 = $b$0 | 0;
+  $b$1 = $b$1 | 0;
+  var $rem = 0, $1$0 = 0, $1$1 = 0, $2$0 = 0, $2$1 = 0, $4$0 = 0, $4$1 = 0, $6$0 = 0, $10$0 = 0, $10$1 = 0, __stackBase__ = 0;
+  __stackBase__ = STACKTOP;
+  STACKTOP = STACKTOP + 8 | 0;
+  $rem = __stackBase__ | 0;
+  $1$0 = $a$1 >> 31 | (($a$1 | 0) < 0 ? -1 : 0) << 1;
+  $1$1 = (($a$1 | 0) < 0 ? -1 : 0) >> 31 | (($a$1 | 0) < 0 ? -1 : 0) << 1;
+  $2$0 = $b$1 >> 31 | (($b$1 | 0) < 0 ? -1 : 0) << 1;
+  $2$1 = (($b$1 | 0) < 0 ? -1 : 0) >> 31 | (($b$1 | 0) < 0 ? -1 : 0) << 1;
+  $4$0 = _i64Subtract($1$0 ^ $a$0, $1$1 ^ $a$1, $1$0, $1$1) | 0;
+  $4$1 = tempRet0;
+  $6$0 = _i64Subtract($2$0 ^ $b$0, $2$1 ^ $b$1, $2$0, $2$1) | 0;
+  ___udivmoddi4($4$0, $4$1, $6$0, tempRet0, $rem) | 0;
+  $10$0 = _i64Subtract(HEAP32[$rem >> 2] ^ $1$0, HEAP32[$rem + 4 >> 2] ^ $1$1, $1$0, $1$1) | 0;
+  $10$1 = tempRet0;
+  STACKTOP = __stackBase__;
+  return (tempRet0 = $10$1, $10$0) | 0;
+}
+function ___muldi3($a$0, $a$1, $b$0, $b$1) {
+  $a$0 = $a$0 | 0;
+  $a$1 = $a$1 | 0;
+  $b$0 = $b$0 | 0;
+  $b$1 = $b$1 | 0;
+  var $x_sroa_0_0_extract_trunc = 0, $y_sroa_0_0_extract_trunc = 0, $1$0 = 0, $1$1 = 0, $2 = 0;
+  $x_sroa_0_0_extract_trunc = $a$0;
+  $y_sroa_0_0_extract_trunc = $b$0;
+  $1$0 = ___muldsi3($x_sroa_0_0_extract_trunc, $y_sroa_0_0_extract_trunc) | 0;
+  $1$1 = tempRet0;
+  $2 = Math_imul($a$1, $y_sroa_0_0_extract_trunc) | 0;
+  return (tempRet0 = ((Math_imul($b$1, $x_sroa_0_0_extract_trunc) | 0) + $2 | 0) + $1$1 | $1$1 & 0, 0 | $1$0 & -1) | 0;
+}
+function ___udivdi3($a$0, $a$1, $b$0, $b$1) {
+  $a$0 = $a$0 | 0;
+  $a$1 = $a$1 | 0;
+  $b$0 = $b$0 | 0;
+  $b$1 = $b$1 | 0;
+  var $1$0 = 0;
+  $1$0 = ___udivmoddi4($a$0, $a$1, $b$0, $b$1, 0) | 0;
+  return $1$0 | 0;
+}
+function ___uremdi3($a$0, $a$1, $b$0, $b$1) {
+  $a$0 = $a$0 | 0;
+  $a$1 = $a$1 | 0;
+  $b$0 = $b$0 | 0;
+  $b$1 = $b$1 | 0;
+  var $rem = 0, __stackBase__ = 0;
+  __stackBase__ = STACKTOP;
+  STACKTOP = STACKTOP + 8 | 0;
+  $rem = __stackBase__ | 0;
+  ___udivmoddi4($a$0, $a$1, $b$0, $b$1, $rem) | 0;
+  STACKTOP = __stackBase__;
+  return (tempRet0 = HEAP32[$rem + 4 >> 2] | 0, HEAP32[$rem >> 2] | 0) | 0;
+}
+function ___udivmoddi4($a$0, $a$1, $b$0, $b$1, $rem) {
+  $a$0 = $a$0 | 0;
+  $a$1 = $a$1 | 0;
+  $b$0 = $b$0 | 0;
+  $b$1 = $b$1 | 0;
+  $rem = $rem | 0;
+  var $n_sroa_0_0_extract_trunc = 0, $n_sroa_1_4_extract_shift$0 = 0, $n_sroa_1_4_extract_trunc = 0, $d_sroa_0_0_extract_trunc = 0, $d_sroa_1_4_extract_shift$0 = 0, $d_sroa_1_4_extract_trunc = 0, $4 = 0, $17 = 0, $37 = 0, $49 = 0, $51 = 0, $57 = 0, $58 = 0, $66 = 0, $78 = 0, $86 = 0, $88 = 0, $89 = 0, $91 = 0, $92 = 0, $95 = 0, $105 = 0, $117 = 0, $119 = 0, $125 = 0, $126 = 0, $130 = 0, $q_sroa_1_1_ph = 0, $q_sroa_0_1_ph = 0, $r_sroa_1_1_ph = 0, $r_sroa_0_1_ph = 0, $sr_1_ph = 0, $d_sroa_0_0_insert_insert99$0 = 0, $d_sroa_0_0_insert_insert99$1 = 0, $137$0 = 0, $137$1 = 0, $carry_0203 = 0, $sr_1202 = 0, $r_sroa_0_1201 = 0, $r_sroa_1_1200 = 0, $q_sroa_0_1199 = 0, $q_sroa_1_1198 = 0, $147 = 0, $149 = 0, $r_sroa_0_0_insert_insert42$0 = 0, $r_sroa_0_0_insert_insert42$1 = 0, $150$1 = 0, $151$0 = 0, $152 = 0, $154$0 = 0, $r_sroa_0_0_extract_trunc = 0, $r_sroa_1_4_extract_trunc = 0, $155 = 0, $carry_0_lcssa$0 = 0, $carry_0_lcssa$1 = 0, $r_sroa_0_1_lcssa = 0, $r_sroa_1_1_lcssa = 0, $q_sroa_0_1_lcssa = 0, $q_sroa_1_1_lcssa = 0, $q_sroa_0_0_insert_ext75$0 = 0, $q_sroa_0_0_insert_ext75$1 = 0, $q_sroa_0_0_insert_insert77$1 = 0, $_0$0 = 0, $_0$1 = 0;
+  $n_sroa_0_0_extract_trunc = $a$0;
+  $n_sroa_1_4_extract_shift$0 = $a$1;
+  $n_sroa_1_4_extract_trunc = $n_sroa_1_4_extract_shift$0;
+  $d_sroa_0_0_extract_trunc = $b$0;
+  $d_sroa_1_4_extract_shift$0 = $b$1;
+  $d_sroa_1_4_extract_trunc = $d_sroa_1_4_extract_shift$0;
+  if (($n_sroa_1_4_extract_trunc | 0) == 0) {
+    $4 = ($rem | 0) != 0;
+    if (($d_sroa_1_4_extract_trunc | 0) == 0) {
+      if ($4) {
+        HEAP32[$rem >> 2] = ($n_sroa_0_0_extract_trunc >>> 0) % ($d_sroa_0_0_extract_trunc >>> 0);
+        HEAP32[$rem + 4 >> 2] = 0;
+      }
+      $_0$1 = 0;
+      $_0$0 = ($n_sroa_0_0_extract_trunc >>> 0) / ($d_sroa_0_0_extract_trunc >>> 0) >>> 0;
+      return (tempRet0 = $_0$1, $_0$0) | 0;
+    } else {
+      if (!$4) {
+        $_0$1 = 0;
+        $_0$0 = 0;
+        return (tempRet0 = $_0$1, $_0$0) | 0;
+      }
+      HEAP32[$rem >> 2] = $a$0 & -1;
+      HEAP32[$rem + 4 >> 2] = $a$1 & 0;
+      $_0$1 = 0;
+      $_0$0 = 0;
+      return (tempRet0 = $_0$1, $_0$0) | 0;
+    }
+  }
+  $17 = ($d_sroa_1_4_extract_trunc | 0) == 0;
+  do {
+    if (($d_sroa_0_0_extract_trunc | 0) == 0) {
+      if ($17) {
+        if (($rem | 0) != 0) {
+          HEAP32[$rem >> 2] = ($n_sroa_1_4_extract_trunc >>> 0) % ($d_sroa_0_0_extract_trunc >>> 0);
+          HEAP32[$rem + 4 >> 2] = 0;
+        }
+        $_0$1 = 0;
+        $_0$0 = ($n_sroa_1_4_extract_trunc >>> 0) / ($d_sroa_0_0_extract_trunc >>> 0) >>> 0;
+        return (tempRet0 = $_0$1, $_0$0) | 0;
+      }
+      if (($n_sroa_0_0_extract_trunc | 0) == 0) {
+        if (($rem | 0) != 0) {
+          HEAP32[$rem >> 2] = 0;
+          HEAP32[$rem + 4 >> 2] = ($n_sroa_1_4_extract_trunc >>> 0) % ($d_sroa_1_4_extract_trunc >>> 0);
+        }
+        $_0$1 = 0;
+        $_0$0 = ($n_sroa_1_4_extract_trunc >>> 0) / ($d_sroa_1_4_extract_trunc >>> 0) >>> 0;
+        return (tempRet0 = $_0$1, $_0$0) | 0;
+      }
+      $37 = $d_sroa_1_4_extract_trunc - 1 | 0;
+      if (($37 & $d_sroa_1_4_extract_trunc | 0) == 0) {
+        if (($rem | 0) != 0) {
+          HEAP32[$rem >> 2] = 0 | $a$0 & -1;
+          HEAP32[$rem + 4 >> 2] = $37 & $n_sroa_1_4_extract_trunc | $a$1 & 0;
+        }
+        $_0$1 = 0;
+        $_0$0 = $n_sroa_1_4_extract_trunc >>> ((_llvm_cttz_i32($d_sroa_1_4_extract_trunc | 0) | 0) >>> 0);
+        return (tempRet0 = $_0$1, $_0$0) | 0;
+      }
+      $49 = Math_clz32($d_sroa_1_4_extract_trunc | 0) | 0;
+      $51 = $49 - (Math_clz32($n_sroa_1_4_extract_trunc | 0) | 0) | 0;
+      if ($51 >>> 0 <= 30) {
+        $57 = $51 + 1 | 0;
+        $58 = 31 - $51 | 0;
+        $sr_1_ph = $57;
+        $r_sroa_0_1_ph = $n_sroa_1_4_extract_trunc << $58 | $n_sroa_0_0_extract_trunc >>> ($57 >>> 0);
+        $r_sroa_1_1_ph = $n_sroa_1_4_extract_trunc >>> ($57 >>> 0);
+        $q_sroa_0_1_ph = 0;
+        $q_sroa_1_1_ph = $n_sroa_0_0_extract_trunc << $58;
+        break;
+      }
+      if (($rem | 0) == 0) {
+        $_0$1 = 0;
+        $_0$0 = 0;
+        return (tempRet0 = $_0$1, $_0$0) | 0;
+      }
+      HEAP32[$rem >> 2] = 0 | $a$0 & -1;
+      HEAP32[$rem + 4 >> 2] = $n_sroa_1_4_extract_shift$0 | $a$1 & 0;
+      $_0$1 = 0;
+      $_0$0 = 0;
+      return (tempRet0 = $_0$1, $_0$0) | 0;
+    } else {
+      if (!$17) {
+        $117 = Math_clz32($d_sroa_1_4_extract_trunc | 0) | 0;
+        $119 = $117 - (Math_clz32($n_sroa_1_4_extract_trunc | 0) | 0) | 0;
+        if ($119 >>> 0 <= 31) {
+          $125 = $119 + 1 | 0;
+          $126 = 31 - $119 | 0;
+          $130 = $119 - 31 >> 31;
+          $sr_1_ph = $125;
+          $r_sroa_0_1_ph = $n_sroa_0_0_extract_trunc >>> ($125 >>> 0) & $130 | $n_sroa_1_4_extract_trunc << $126;
+          $r_sroa_1_1_ph = $n_sroa_1_4_extract_trunc >>> ($125 >>> 0) & $130;
+          $q_sroa_0_1_ph = 0;
+          $q_sroa_1_1_ph = $n_sroa_0_0_extract_trunc << $126;
+          break;
+        }
+        if (($rem | 0) == 0) {
+          $_0$1 = 0;
+          $_0$0 = 0;
+          return (tempRet0 = $_0$1, $_0$0) | 0;
+        }
+        HEAP32[$rem >> 2] = 0 | $a$0 & -1;
+        HEAP32[$rem + 4 >> 2] = $n_sroa_1_4_extract_shift$0 | $a$1 & 0;
+        $_0$1 = 0;
+        $_0$0 = 0;
+        return (tempRet0 = $_0$1, $_0$0) | 0;
+      }
+      $66 = $d_sroa_0_0_extract_trunc - 1 | 0;
+      if (($66 & $d_sroa_0_0_extract_trunc | 0) != 0) {
+        $86 = (Math_clz32($d_sroa_0_0_extract_trunc | 0) | 0) + 33 | 0;
+        $88 = $86 - (Math_clz32($n_sroa_1_4_extract_trunc | 0) | 0) | 0;
+        $89 = 64 - $88 | 0;
+        $91 = 32 - $88 | 0;
+        $92 = $91 >> 31;
+        $95 = $88 - 32 | 0;
+        $105 = $95 >> 31;
+        $sr_1_ph = $88;
+        $r_sroa_0_1_ph = $91 - 1 >> 31 & $n_sroa_1_4_extract_trunc >>> ($95 >>> 0) | ($n_sroa_1_4_extract_trunc << $91 | $n_sroa_0_0_extract_trunc >>> ($88 >>> 0)) & $105;
+        $r_sroa_1_1_ph = $105 & $n_sroa_1_4_extract_trunc >>> ($88 >>> 0);
+        $q_sroa_0_1_ph = $n_sroa_0_0_extract_trunc << $89 & $92;
+        $q_sroa_1_1_ph = ($n_sroa_1_4_extract_trunc << $89 | $n_sroa_0_0_extract_trunc >>> ($95 >>> 0)) & $92 | $n_sroa_0_0_extract_trunc << $91 & $88 - 33 >> 31;
+        break;
+      }
+      if (($rem | 0) != 0) {
+        HEAP32[$rem >> 2] = $66 & $n_sroa_0_0_extract_trunc;
+        HEAP32[$rem + 4 >> 2] = 0;
+      }
+      if (($d_sroa_0_0_extract_trunc | 0) == 1) {
+        $_0$1 = $n_sroa_1_4_extract_shift$0 | $a$1 & 0;
+        $_0$0 = 0 | $a$0 & -1;
+        return (tempRet0 = $_0$1, $_0$0) | 0;
+      } else {
+        $78 = _llvm_cttz_i32($d_sroa_0_0_extract_trunc | 0) | 0;
+        $_0$1 = 0 | $n_sroa_1_4_extract_trunc >>> ($78 >>> 0);
+        $_0$0 = $n_sroa_1_4_extract_trunc << 32 - $78 | $n_sroa_0_0_extract_trunc >>> ($78 >>> 0) | 0;
+        return (tempRet0 = $_0$1, $_0$0) | 0;
+      }
+    }
+  } while (0);
+  if (($sr_1_ph | 0) == 0) {
+    $q_sroa_1_1_lcssa = $q_sroa_1_1_ph;
+    $q_sroa_0_1_lcssa = $q_sroa_0_1_ph;
+    $r_sroa_1_1_lcssa = $r_sroa_1_1_ph;
+    $r_sroa_0_1_lcssa = $r_sroa_0_1_ph;
+    $carry_0_lcssa$1 = 0;
+    $carry_0_lcssa$0 = 0;
+  } else {
+    $d_sroa_0_0_insert_insert99$0 = 0 | $b$0 & -1;
+    $d_sroa_0_0_insert_insert99$1 = $d_sroa_1_4_extract_shift$0 | $b$1 & 0;
+    $137$0 = _i64Add($d_sroa_0_0_insert_insert99$0 | 0, $d_sroa_0_0_insert_insert99$1 | 0, -1, -1) | 0;
+    $137$1 = tempRet0;
+    $q_sroa_1_1198 = $q_sroa_1_1_ph;
+    $q_sroa_0_1199 = $q_sroa_0_1_ph;
+    $r_sroa_1_1200 = $r_sroa_1_1_ph;
+    $r_sroa_0_1201 = $r_sroa_0_1_ph;
+    $sr_1202 = $sr_1_ph;
+    $carry_0203 = 0;
+    while (1) {
+      $147 = $q_sroa_0_1199 >>> 31 | $q_sroa_1_1198 << 1;
+      $149 = $carry_0203 | $q_sroa_0_1199 << 1;
+      $r_sroa_0_0_insert_insert42$0 = 0 | ($r_sroa_0_1201 << 1 | $q_sroa_1_1198 >>> 31);
+      $r_sroa_0_0_insert_insert42$1 = $r_sroa_0_1201 >>> 31 | $r_sroa_1_1200 << 1 | 0;
+      _i64Subtract($137$0, $137$1, $r_sroa_0_0_insert_insert42$0, $r_sroa_0_0_insert_insert42$1) | 0;
+      $150$1 = tempRet0;
+      $151$0 = $150$1 >> 31 | (($150$1 | 0) < 0 ? -1 : 0) << 1;
+      $152 = $151$0 & 1;
+      $154$0 = _i64Subtract($r_sroa_0_0_insert_insert42$0, $r_sroa_0_0_insert_insert42$1, $151$0 & $d_sroa_0_0_insert_insert99$0, ((($150$1 | 0) < 0 ? -1 : 0) >> 31 | (($150$1 | 0) < 0 ? -1 : 0) << 1) & $d_sroa_0_0_insert_insert99$1) | 0;
+      $r_sroa_0_0_extract_trunc = $154$0;
+      $r_sroa_1_4_extract_trunc = tempRet0;
+      $155 = $sr_1202 - 1 | 0;
+      if (($155 | 0) == 0) {
+        break;
+      } else {
+        $q_sroa_1_1198 = $147;
+        $q_sroa_0_1199 = $149;
+        $r_sroa_1_1200 = $r_sroa_1_4_extract_trunc;
+        $r_sroa_0_1201 = $r_sroa_0_0_extract_trunc;
+        $sr_1202 = $155;
+        $carry_0203 = $152;
+      }
+    }
+    $q_sroa_1_1_lcssa = $147;
+    $q_sroa_0_1_lcssa = $149;
+    $r_sroa_1_1_lcssa = $r_sroa_1_4_extract_trunc;
+    $r_sroa_0_1_lcssa = $r_sroa_0_0_extract_trunc;
+    $carry_0_lcssa$1 = 0;
+    $carry_0_lcssa$0 = $152;
+  }
+  $q_sroa_0_0_insert_ext75$0 = $q_sroa_0_1_lcssa;
+  $q_sroa_0_0_insert_ext75$1 = 0;
+  $q_sroa_0_0_insert_insert77$1 = $q_sroa_1_1_lcssa | $q_sroa_0_0_insert_ext75$1;
+  if (($rem | 0) != 0) {
+    HEAP32[$rem >> 2] = 0 | $r_sroa_0_1_lcssa;
+    HEAP32[$rem + 4 >> 2] = $r_sroa_1_1_lcssa | 0;
+  }
+  $_0$1 = (0 | $q_sroa_0_0_insert_ext75$0) >>> 31 | $q_sroa_0_0_insert_insert77$1 << 1 | ($q_sroa_0_0_insert_ext75$1 << 1 | $q_sroa_0_0_insert_ext75$0 >>> 31) & 0 | $carry_0_lcssa$1;
+  $_0$0 = ($q_sroa_0_0_insert_ext75$0 << 1 | 0 >>> 31) & -2 | $carry_0_lcssa$0;
+  return (tempRet0 = $_0$1, $_0$0) | 0;
+}
+// =======================================================================
+
+
 
   
 
@@ -8720,7 +9757,7 @@ function _memcpy(dest, src, num) {
 // EMSCRIPTEN_END_FUNCS
 
 
-  return { _strlen: _strlen, _free: _free, _returnInt32Argument: _returnInt32Argument, _memset: _memset, _malloc: _malloc, _memcpy: _memcpy, runPostSets: runPostSets, stackAlloc: stackAlloc, stackSave: stackSave, stackRestore: stackRestore, establishStackSpace: establishStackSpace, setThrew: setThrew, setTempRet0: setTempRet0, getTempRet0: getTempRet0 };
+  return { _strlen: _strlen, _returnInt64Argument: _returnInt64Argument, _returnBooleanArgument: _returnBooleanArgument, _returnPointerArgument: _returnPointerArgument, _modifyStructureByReferenceArray: _modifyStructureByReferenceArray, _returnWStringArgument: _returnWStringArgument, _returnInt16Argument: _returnInt16Argument, _memset: _memset, _testStructureByReferenceArrayInitialization: _testStructureByReferenceArrayInitialization, _returnLongArgument: _returnLongArgument, _returnInt8Argument: _returnInt8Argument, _i64Add: _i64Add, _modifyStructureArray: _modifyStructureArray, _fillInt8Buffer: _fillInt8Buffer, _testStructureByValueArgument: _testStructureByValueArgument, _free: _free, _memcpy: _memcpy, _testStructurePointerArgument: _testStructurePointerArgument, _returnInt32Argument: _returnInt32Argument, _checkInt64ArgumentAlignment: _checkInt64ArgumentAlignment, _checkDoubleArgumentAlignment: _checkDoubleArgumentAlignment, _malloc: _malloc, _testStructureArrayInitialization: _testStructureArrayInitialization, _returnWideCharArgument: _returnWideCharArgument, _returnStringArgument: _returnStringArgument, runPostSets: runPostSets, stackAlloc: stackAlloc, stackSave: stackSave, stackRestore: stackRestore, establishStackSpace: establishStackSpace, setThrew: setThrew, setTempRet0: setTempRet0, getTempRet0: getTempRet0 };
 })
 // EMSCRIPTEN_END_ASM
 (Module.asmGlobalArg, Module.asmLibraryArg, buffer);
@@ -8730,10 +9767,88 @@ assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it a
 return real__strlen.apply(null, arguments);
 };
 
+var real__returnInt64Argument = asm["_returnInt64Argument"]; asm["_returnInt64Argument"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__returnInt64Argument.apply(null, arguments);
+};
+
+var real__returnBooleanArgument = asm["_returnBooleanArgument"]; asm["_returnBooleanArgument"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__returnBooleanArgument.apply(null, arguments);
+};
+
+var real__returnPointerArgument = asm["_returnPointerArgument"]; asm["_returnPointerArgument"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__returnPointerArgument.apply(null, arguments);
+};
+
+var real__testStructurePointerArgument = asm["_testStructurePointerArgument"]; asm["_testStructurePointerArgument"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__testStructurePointerArgument.apply(null, arguments);
+};
+
+var real__returnWStringArgument = asm["_returnWStringArgument"]; asm["_returnWStringArgument"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__returnWStringArgument.apply(null, arguments);
+};
+
+var real__returnInt16Argument = asm["_returnInt16Argument"]; asm["_returnInt16Argument"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__returnInt16Argument.apply(null, arguments);
+};
+
+var real__returnLongArgument = asm["_returnLongArgument"]; asm["_returnLongArgument"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__returnLongArgument.apply(null, arguments);
+};
+
+var real__returnInt8Argument = asm["_returnInt8Argument"]; asm["_returnInt8Argument"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__returnInt8Argument.apply(null, arguments);
+};
+
+var real__i64Add = asm["_i64Add"]; asm["_i64Add"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__i64Add.apply(null, arguments);
+};
+
+var real__modifyStructureArray = asm["_modifyStructureArray"]; asm["_modifyStructureArray"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__modifyStructureArray.apply(null, arguments);
+};
+
+var real__fillInt8Buffer = asm["_fillInt8Buffer"]; asm["_fillInt8Buffer"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__fillInt8Buffer.apply(null, arguments);
+};
+
+var real__testStructureByValueArgument = asm["_testStructureByValueArgument"]; asm["_testStructureByValueArgument"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__testStructureByValueArgument.apply(null, arguments);
+};
+
 var real__free = asm["_free"]; asm["_free"] = function() {
 assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
 assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
 return real__free.apply(null, arguments);
+};
+
+var real__modifyStructureByReferenceArray = asm["_modifyStructureByReferenceArray"]; asm["_modifyStructureByReferenceArray"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__modifyStructureByReferenceArray.apply(null, arguments);
 };
 
 var real__returnInt32Argument = asm["_returnInt32Argument"]; asm["_returnInt32Argument"] = function() {
@@ -8742,18 +9857,73 @@ assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it a
 return real__returnInt32Argument.apply(null, arguments);
 };
 
+var real__checkInt64ArgumentAlignment = asm["_checkInt64ArgumentAlignment"]; asm["_checkInt64ArgumentAlignment"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__checkInt64ArgumentAlignment.apply(null, arguments);
+};
+
+var real__checkDoubleArgumentAlignment = asm["_checkDoubleArgumentAlignment"]; asm["_checkDoubleArgumentAlignment"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__checkDoubleArgumentAlignment.apply(null, arguments);
+};
+
 var real__malloc = asm["_malloc"]; asm["_malloc"] = function() {
 assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
 assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
 return real__malloc.apply(null, arguments);
 };
+
+var real__testStructureArrayInitialization = asm["_testStructureArrayInitialization"]; asm["_testStructureArrayInitialization"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__testStructureArrayInitialization.apply(null, arguments);
+};
+
+var real__returnWideCharArgument = asm["_returnWideCharArgument"]; asm["_returnWideCharArgument"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__returnWideCharArgument.apply(null, arguments);
+};
+
+var real__returnStringArgument = asm["_returnStringArgument"]; asm["_returnStringArgument"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__returnStringArgument.apply(null, arguments);
+};
+
+var real__testStructureByReferenceArrayInitialization = asm["_testStructureByReferenceArrayInitialization"]; asm["_testStructureByReferenceArrayInitialization"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__testStructureByReferenceArrayInitialization.apply(null, arguments);
+};
 var _strlen = Module["_strlen"] = asm["_strlen"];
+var _returnInt64Argument = Module["_returnInt64Argument"] = asm["_returnInt64Argument"];
+var _returnBooleanArgument = Module["_returnBooleanArgument"] = asm["_returnBooleanArgument"];
+var _returnPointerArgument = Module["_returnPointerArgument"] = asm["_returnPointerArgument"];
+var _testStructurePointerArgument = Module["_testStructurePointerArgument"] = asm["_testStructurePointerArgument"];
+var _returnWStringArgument = Module["_returnWStringArgument"] = asm["_returnWStringArgument"];
+var _returnInt16Argument = Module["_returnInt16Argument"] = asm["_returnInt16Argument"];
+var _memset = Module["_memset"] = asm["_memset"];
+var _memcpy = Module["_memcpy"] = asm["_memcpy"];
+var _returnLongArgument = Module["_returnLongArgument"] = asm["_returnLongArgument"];
+var _returnInt8Argument = Module["_returnInt8Argument"] = asm["_returnInt8Argument"];
+var _i64Add = Module["_i64Add"] = asm["_i64Add"];
+var _modifyStructureArray = Module["_modifyStructureArray"] = asm["_modifyStructureArray"];
+var _fillInt8Buffer = Module["_fillInt8Buffer"] = asm["_fillInt8Buffer"];
+var _testStructureByValueArgument = Module["_testStructureByValueArgument"] = asm["_testStructureByValueArgument"];
 var _free = Module["_free"] = asm["_free"];
 var runPostSets = Module["runPostSets"] = asm["runPostSets"];
+var _modifyStructureByReferenceArray = Module["_modifyStructureByReferenceArray"] = asm["_modifyStructureByReferenceArray"];
 var _returnInt32Argument = Module["_returnInt32Argument"] = asm["_returnInt32Argument"];
-var _memset = Module["_memset"] = asm["_memset"];
+var _checkInt64ArgumentAlignment = Module["_checkInt64ArgumentAlignment"] = asm["_checkInt64ArgumentAlignment"];
+var _checkDoubleArgumentAlignment = Module["_checkDoubleArgumentAlignment"] = asm["_checkDoubleArgumentAlignment"];
 var _malloc = Module["_malloc"] = asm["_malloc"];
-var _memcpy = Module["_memcpy"] = asm["_memcpy"];
+var _testStructureArrayInitialization = Module["_testStructureArrayInitialization"] = asm["_testStructureArrayInitialization"];
+var _returnWideCharArgument = Module["_returnWideCharArgument"] = asm["_returnWideCharArgument"];
+var _returnStringArgument = Module["_returnStringArgument"] = asm["_returnStringArgument"];
+var _testStructureByReferenceArrayInitialization = Module["_testStructureByReferenceArrayInitialization"] = asm["_testStructureByReferenceArrayInitialization"];
 ;
 
 Runtime.stackAlloc = asm['stackAlloc'];
@@ -8765,8 +9935,1616 @@ Runtime.setTempRet0 = asm['setTempRet0'];
 Runtime.getTempRet0 = asm['getTempRet0'];
 
 
-// Warning: printing of i64 values may be slightly rounded! No deep i64 math used, so precise i64 code not included
-var i64Math = null;
+// TODO: strip out parts of this we do not need
+
+//======= begin closure i64 code =======
+
+// Copyright 2009 The Closure Library Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS-IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/**
+ * @fileoverview Defines a Long class for representing a 64-bit two's-complement
+ * integer value, which faithfully simulates the behavior of a Java "long". This
+ * implementation is derived from LongLib in GWT.
+ *
+ */
+
+var i64Math = (function() { // Emscripten wrapper
+  var goog = { math: {} };
+
+
+  /**
+   * Constructs a 64-bit two's-complement integer, given its low and high 32-bit
+   * values as *signed* integers.  See the from* functions below for more
+   * convenient ways of constructing Longs.
+   *
+   * The internal representation of a long is the two given signed, 32-bit values.
+   * We use 32-bit pieces because these are the size of integers on which
+   * Javascript performs bit-operations.  For operations like addition and
+   * multiplication, we split each number into 16-bit pieces, which can easily be
+   * multiplied within Javascript's floating-point representation without overflow
+   * or change in sign.
+   *
+   * In the algorithms below, we frequently reduce the negative case to the
+   * positive case by negating the input(s) and then post-processing the result.
+   * Note that we must ALWAYS check specially whether those values are MIN_VALUE
+   * (-2^63) because -MIN_VALUE == MIN_VALUE (since 2^63 cannot be represented as
+   * a positive number, it overflows back into a negative).  Not handling this
+   * case would often result in infinite recursion.
+   *
+   * @param {number} low  The low (signed) 32 bits of the long.
+   * @param {number} high  The high (signed) 32 bits of the long.
+   * @constructor
+   */
+  goog.math.Long = function(low, high) {
+    /**
+     * @type {number}
+     * @private
+     */
+    this.low_ = low | 0;  // force into 32 signed bits.
+
+    /**
+     * @type {number}
+     * @private
+     */
+    this.high_ = high | 0;  // force into 32 signed bits.
+  };
+
+
+  // NOTE: Common constant values ZERO, ONE, NEG_ONE, etc. are defined below the
+  // from* methods on which they depend.
+
+
+  /**
+   * A cache of the Long representations of small integer values.
+   * @type {!Object}
+   * @private
+   */
+  goog.math.Long.IntCache_ = {};
+
+
+  /**
+   * Returns a Long representing the given (32-bit) integer value.
+   * @param {number} value The 32-bit integer in question.
+   * @return {!goog.math.Long} The corresponding Long value.
+   */
+  goog.math.Long.fromInt = function(value) {
+    if (-128 <= value && value < 128) {
+      var cachedObj = goog.math.Long.IntCache_[value];
+      if (cachedObj) {
+        return cachedObj;
+      }
+    }
+
+    var obj = new goog.math.Long(value | 0, value < 0 ? -1 : 0);
+    if (-128 <= value && value < 128) {
+      goog.math.Long.IntCache_[value] = obj;
+    }
+    return obj;
+  };
+
+
+  /**
+   * Returns a Long representing the given value, provided that it is a finite
+   * number.  Otherwise, zero is returned.
+   * @param {number} value The number in question.
+   * @return {!goog.math.Long} The corresponding Long value.
+   */
+  goog.math.Long.fromNumber = function(value) {
+    if (isNaN(value) || !isFinite(value)) {
+      return goog.math.Long.ZERO;
+    } else if (value <= -goog.math.Long.TWO_PWR_63_DBL_) {
+      return goog.math.Long.MIN_VALUE;
+    } else if (value + 1 >= goog.math.Long.TWO_PWR_63_DBL_) {
+      return goog.math.Long.MAX_VALUE;
+    } else if (value < 0) {
+      return goog.math.Long.fromNumber(-value).negate();
+    } else {
+      return new goog.math.Long(
+          (value % goog.math.Long.TWO_PWR_32_DBL_) | 0,
+          (value / goog.math.Long.TWO_PWR_32_DBL_) | 0);
+    }
+  };
+
+
+  /**
+   * Returns a Long representing the 64-bit integer that comes by concatenating
+   * the given high and low bits.  Each is assumed to use 32 bits.
+   * @param {number} lowBits The low 32-bits.
+   * @param {number} highBits The high 32-bits.
+   * @return {!goog.math.Long} The corresponding Long value.
+   */
+  goog.math.Long.fromBits = function(lowBits, highBits) {
+    return new goog.math.Long(lowBits, highBits);
+  };
+
+
+  /**
+   * Returns a Long representation of the given string, written using the given
+   * radix.
+   * @param {string} str The textual representation of the Long.
+   * @param {number=} opt_radix The radix in which the text is written.
+   * @return {!goog.math.Long} The corresponding Long value.
+   */
+  goog.math.Long.fromString = function(str, opt_radix) {
+    if (str.length == 0) {
+      throw Error('number format error: empty string');
+    }
+
+    var radix = opt_radix || 10;
+    if (radix < 2 || 36 < radix) {
+      throw Error('radix out of range: ' + radix);
+    }
+
+    if (str.charAt(0) == '-') {
+      return goog.math.Long.fromString(str.substring(1), radix).negate();
+    } else if (str.indexOf('-') >= 0) {
+      throw Error('number format error: interior "-" character: ' + str);
+    }
+
+    // Do several (8) digits each time through the loop, so as to
+    // minimize the calls to the very expensive emulated div.
+    var radixToPower = goog.math.Long.fromNumber(Math.pow(radix, 8));
+
+    var result = goog.math.Long.ZERO;
+    for (var i = 0; i < str.length; i += 8) {
+      var size = Math.min(8, str.length - i);
+      var value = parseInt(str.substring(i, i + size), radix);
+      if (size < 8) {
+        var power = goog.math.Long.fromNumber(Math.pow(radix, size));
+        result = result.multiply(power).add(goog.math.Long.fromNumber(value));
+      } else {
+        result = result.multiply(radixToPower);
+        result = result.add(goog.math.Long.fromNumber(value));
+      }
+    }
+    return result;
+  };
+
+
+  // NOTE: the compiler should inline these constant values below and then remove
+  // these variables, so there should be no runtime penalty for these.
+
+
+  /**
+   * Number used repeated below in calculations.  This must appear before the
+   * first call to any from* function below.
+   * @type {number}
+   * @private
+   */
+  goog.math.Long.TWO_PWR_16_DBL_ = 1 << 16;
+
+
+  /**
+   * @type {number}
+   * @private
+   */
+  goog.math.Long.TWO_PWR_24_DBL_ = 1 << 24;
+
+
+  /**
+   * @type {number}
+   * @private
+   */
+  goog.math.Long.TWO_PWR_32_DBL_ =
+      goog.math.Long.TWO_PWR_16_DBL_ * goog.math.Long.TWO_PWR_16_DBL_;
+
+
+  /**
+   * @type {number}
+   * @private
+   */
+  goog.math.Long.TWO_PWR_31_DBL_ =
+      goog.math.Long.TWO_PWR_32_DBL_ / 2;
+
+
+  /**
+   * @type {number}
+   * @private
+   */
+  goog.math.Long.TWO_PWR_48_DBL_ =
+      goog.math.Long.TWO_PWR_32_DBL_ * goog.math.Long.TWO_PWR_16_DBL_;
+
+
+  /**
+   * @type {number}
+   * @private
+   */
+  goog.math.Long.TWO_PWR_64_DBL_ =
+      goog.math.Long.TWO_PWR_32_DBL_ * goog.math.Long.TWO_PWR_32_DBL_;
+
+
+  /**
+   * @type {number}
+   * @private
+   */
+  goog.math.Long.TWO_PWR_63_DBL_ =
+      goog.math.Long.TWO_PWR_64_DBL_ / 2;
+
+
+  /** @type {!goog.math.Long} */
+  goog.math.Long.ZERO = goog.math.Long.fromInt(0);
+
+
+  /** @type {!goog.math.Long} */
+  goog.math.Long.ONE = goog.math.Long.fromInt(1);
+
+
+  /** @type {!goog.math.Long} */
+  goog.math.Long.NEG_ONE = goog.math.Long.fromInt(-1);
+
+
+  /** @type {!goog.math.Long} */
+  goog.math.Long.MAX_VALUE =
+      goog.math.Long.fromBits(0xFFFFFFFF | 0, 0x7FFFFFFF | 0);
+
+
+  /** @type {!goog.math.Long} */
+  goog.math.Long.MIN_VALUE = goog.math.Long.fromBits(0, 0x80000000 | 0);
+
+
+  /**
+   * @type {!goog.math.Long}
+   * @private
+   */
+  goog.math.Long.TWO_PWR_24_ = goog.math.Long.fromInt(1 << 24);
+
+
+  /** @return {number} The value, assuming it is a 32-bit integer. */
+  goog.math.Long.prototype.toInt = function() {
+    return this.low_;
+  };
+
+
+  /** @return {number} The closest floating-point representation to this value. */
+  goog.math.Long.prototype.toNumber = function() {
+    return this.high_ * goog.math.Long.TWO_PWR_32_DBL_ +
+           this.getLowBitsUnsigned();
+  };
+
+
+  /**
+   * @param {number=} opt_radix The radix in which the text should be written.
+   * @return {string} The textual representation of this value.
+   */
+  goog.math.Long.prototype.toString = function(opt_radix) {
+    var radix = opt_radix || 10;
+    if (radix < 2 || 36 < radix) {
+      throw Error('radix out of range: ' + radix);
+    }
+
+    if (this.isZero()) {
+      return '0';
+    }
+
+    if (this.isNegative()) {
+      if (this.equals(goog.math.Long.MIN_VALUE)) {
+        // We need to change the Long value before it can be negated, so we remove
+        // the bottom-most digit in this base and then recurse to do the rest.
+        var radixLong = goog.math.Long.fromNumber(radix);
+        var div = this.div(radixLong);
+        var rem = div.multiply(radixLong).subtract(this);
+        return div.toString(radix) + rem.toInt().toString(radix);
+      } else {
+        return '-' + this.negate().toString(radix);
+      }
+    }
+
+    // Do several (6) digits each time through the loop, so as to
+    // minimize the calls to the very expensive emulated div.
+    var radixToPower = goog.math.Long.fromNumber(Math.pow(radix, 6));
+
+    var rem = this;
+    var result = '';
+    while (true) {
+      var remDiv = rem.div(radixToPower);
+      var intval = rem.subtract(remDiv.multiply(radixToPower)).toInt();
+      var digits = intval.toString(radix);
+
+      rem = remDiv;
+      if (rem.isZero()) {
+        return digits + result;
+      } else {
+        while (digits.length < 6) {
+          digits = '0' + digits;
+        }
+        result = '' + digits + result;
+      }
+    }
+  };
+
+
+  /** @return {number} The high 32-bits as a signed value. */
+  goog.math.Long.prototype.getHighBits = function() {
+    return this.high_;
+  };
+
+
+  /** @return {number} The low 32-bits as a signed value. */
+  goog.math.Long.prototype.getLowBits = function() {
+    return this.low_;
+  };
+
+
+  /** @return {number} The low 32-bits as an unsigned value. */
+  goog.math.Long.prototype.getLowBitsUnsigned = function() {
+    return (this.low_ >= 0) ?
+        this.low_ : goog.math.Long.TWO_PWR_32_DBL_ + this.low_;
+  };
+
+
+  /**
+   * @return {number} Returns the number of bits needed to represent the absolute
+   *     value of this Long.
+   */
+  goog.math.Long.prototype.getNumBitsAbs = function() {
+    if (this.isNegative()) {
+      if (this.equals(goog.math.Long.MIN_VALUE)) {
+        return 64;
+      } else {
+        return this.negate().getNumBitsAbs();
+      }
+    } else {
+      var val = this.high_ != 0 ? this.high_ : this.low_;
+      for (var bit = 31; bit > 0; bit--) {
+        if ((val & (1 << bit)) != 0) {
+          break;
+        }
+      }
+      return this.high_ != 0 ? bit + 33 : bit + 1;
+    }
+  };
+
+
+  /** @return {boolean} Whether this value is zero. */
+  goog.math.Long.prototype.isZero = function() {
+    return this.high_ == 0 && this.low_ == 0;
+  };
+
+
+  /** @return {boolean} Whether this value is negative. */
+  goog.math.Long.prototype.isNegative = function() {
+    return this.high_ < 0;
+  };
+
+
+  /** @return {boolean} Whether this value is odd. */
+  goog.math.Long.prototype.isOdd = function() {
+    return (this.low_ & 1) == 1;
+  };
+
+
+  /**
+   * @param {goog.math.Long} other Long to compare against.
+   * @return {boolean} Whether this Long equals the other.
+   */
+  goog.math.Long.prototype.equals = function(other) {
+    return (this.high_ == other.high_) && (this.low_ == other.low_);
+  };
+
+
+  /**
+   * @param {goog.math.Long} other Long to compare against.
+   * @return {boolean} Whether this Long does not equal the other.
+   */
+  goog.math.Long.prototype.notEquals = function(other) {
+    return (this.high_ != other.high_) || (this.low_ != other.low_);
+  };
+
+
+  /**
+   * @param {goog.math.Long} other Long to compare against.
+   * @return {boolean} Whether this Long is less than the other.
+   */
+  goog.math.Long.prototype.lessThan = function(other) {
+    return this.compare(other) < 0;
+  };
+
+
+  /**
+   * @param {goog.math.Long} other Long to compare against.
+   * @return {boolean} Whether this Long is less than or equal to the other.
+   */
+  goog.math.Long.prototype.lessThanOrEqual = function(other) {
+    return this.compare(other) <= 0;
+  };
+
+
+  /**
+   * @param {goog.math.Long} other Long to compare against.
+   * @return {boolean} Whether this Long is greater than the other.
+   */
+  goog.math.Long.prototype.greaterThan = function(other) {
+    return this.compare(other) > 0;
+  };
+
+
+  /**
+   * @param {goog.math.Long} other Long to compare against.
+   * @return {boolean} Whether this Long is greater than or equal to the other.
+   */
+  goog.math.Long.prototype.greaterThanOrEqual = function(other) {
+    return this.compare(other) >= 0;
+  };
+
+
+  /**
+   * Compares this Long with the given one.
+   * @param {goog.math.Long} other Long to compare against.
+   * @return {number} 0 if they are the same, 1 if the this is greater, and -1
+   *     if the given one is greater.
+   */
+  goog.math.Long.prototype.compare = function(other) {
+    if (this.equals(other)) {
+      return 0;
+    }
+
+    var thisNeg = this.isNegative();
+    var otherNeg = other.isNegative();
+    if (thisNeg && !otherNeg) {
+      return -1;
+    }
+    if (!thisNeg && otherNeg) {
+      return 1;
+    }
+
+    // at this point, the signs are the same, so subtraction will not overflow
+    if (this.subtract(other).isNegative()) {
+      return -1;
+    } else {
+      return 1;
+    }
+  };
+
+
+  /** @return {!goog.math.Long} The negation of this value. */
+  goog.math.Long.prototype.negate = function() {
+    if (this.equals(goog.math.Long.MIN_VALUE)) {
+      return goog.math.Long.MIN_VALUE;
+    } else {
+      return this.not().add(goog.math.Long.ONE);
+    }
+  };
+
+
+  /**
+   * Returns the sum of this and the given Long.
+   * @param {goog.math.Long} other Long to add to this one.
+   * @return {!goog.math.Long} The sum of this and the given Long.
+   */
+  goog.math.Long.prototype.add = function(other) {
+    // Divide each number into 4 chunks of 16 bits, and then sum the chunks.
+
+    var a48 = this.high_ >>> 16;
+    var a32 = this.high_ & 0xFFFF;
+    var a16 = this.low_ >>> 16;
+    var a00 = this.low_ & 0xFFFF;
+
+    var b48 = other.high_ >>> 16;
+    var b32 = other.high_ & 0xFFFF;
+    var b16 = other.low_ >>> 16;
+    var b00 = other.low_ & 0xFFFF;
+
+    var c48 = 0, c32 = 0, c16 = 0, c00 = 0;
+    c00 += a00 + b00;
+    c16 += c00 >>> 16;
+    c00 &= 0xFFFF;
+    c16 += a16 + b16;
+    c32 += c16 >>> 16;
+    c16 &= 0xFFFF;
+    c32 += a32 + b32;
+    c48 += c32 >>> 16;
+    c32 &= 0xFFFF;
+    c48 += a48 + b48;
+    c48 &= 0xFFFF;
+    return goog.math.Long.fromBits((c16 << 16) | c00, (c48 << 16) | c32);
+  };
+
+
+  /**
+   * Returns the difference of this and the given Long.
+   * @param {goog.math.Long} other Long to subtract from this.
+   * @return {!goog.math.Long} The difference of this and the given Long.
+   */
+  goog.math.Long.prototype.subtract = function(other) {
+    return this.add(other.negate());
+  };
+
+
+  /**
+   * Returns the product of this and the given long.
+   * @param {goog.math.Long} other Long to multiply with this.
+   * @return {!goog.math.Long} The product of this and the other.
+   */
+  goog.math.Long.prototype.multiply = function(other) {
+    if (this.isZero()) {
+      return goog.math.Long.ZERO;
+    } else if (other.isZero()) {
+      return goog.math.Long.ZERO;
+    }
+
+    if (this.equals(goog.math.Long.MIN_VALUE)) {
+      return other.isOdd() ? goog.math.Long.MIN_VALUE : goog.math.Long.ZERO;
+    } else if (other.equals(goog.math.Long.MIN_VALUE)) {
+      return this.isOdd() ? goog.math.Long.MIN_VALUE : goog.math.Long.ZERO;
+    }
+
+    if (this.isNegative()) {
+      if (other.isNegative()) {
+        return this.negate().multiply(other.negate());
+      } else {
+        return this.negate().multiply(other).negate();
+      }
+    } else if (other.isNegative()) {
+      return this.multiply(other.negate()).negate();
+    }
+
+    // If both longs are small, use float multiplication
+    if (this.lessThan(goog.math.Long.TWO_PWR_24_) &&
+        other.lessThan(goog.math.Long.TWO_PWR_24_)) {
+      return goog.math.Long.fromNumber(this.toNumber() * other.toNumber());
+    }
+
+    // Divide each long into 4 chunks of 16 bits, and then add up 4x4 products.
+    // We can skip products that would overflow.
+
+    var a48 = this.high_ >>> 16;
+    var a32 = this.high_ & 0xFFFF;
+    var a16 = this.low_ >>> 16;
+    var a00 = this.low_ & 0xFFFF;
+
+    var b48 = other.high_ >>> 16;
+    var b32 = other.high_ & 0xFFFF;
+    var b16 = other.low_ >>> 16;
+    var b00 = other.low_ & 0xFFFF;
+
+    var c48 = 0, c32 = 0, c16 = 0, c00 = 0;
+    c00 += a00 * b00;
+    c16 += c00 >>> 16;
+    c00 &= 0xFFFF;
+    c16 += a16 * b00;
+    c32 += c16 >>> 16;
+    c16 &= 0xFFFF;
+    c16 += a00 * b16;
+    c32 += c16 >>> 16;
+    c16 &= 0xFFFF;
+    c32 += a32 * b00;
+    c48 += c32 >>> 16;
+    c32 &= 0xFFFF;
+    c32 += a16 * b16;
+    c48 += c32 >>> 16;
+    c32 &= 0xFFFF;
+    c32 += a00 * b32;
+    c48 += c32 >>> 16;
+    c32 &= 0xFFFF;
+    c48 += a48 * b00 + a32 * b16 + a16 * b32 + a00 * b48;
+    c48 &= 0xFFFF;
+    return goog.math.Long.fromBits((c16 << 16) | c00, (c48 << 16) | c32);
+  };
+
+
+  /**
+   * Returns this Long divided by the given one.
+   * @param {goog.math.Long} other Long by which to divide.
+   * @return {!goog.math.Long} This Long divided by the given one.
+   */
+  goog.math.Long.prototype.div = function(other) {
+    if (other.isZero()) {
+      throw Error('division by zero');
+    } else if (this.isZero()) {
+      return goog.math.Long.ZERO;
+    }
+
+    if (this.equals(goog.math.Long.MIN_VALUE)) {
+      if (other.equals(goog.math.Long.ONE) ||
+          other.equals(goog.math.Long.NEG_ONE)) {
+        return goog.math.Long.MIN_VALUE;  // recall that -MIN_VALUE == MIN_VALUE
+      } else if (other.equals(goog.math.Long.MIN_VALUE)) {
+        return goog.math.Long.ONE;
+      } else {
+        // At this point, we have |other| >= 2, so |this/other| < |MIN_VALUE|.
+        var halfThis = this.shiftRight(1);
+        var approx = halfThis.div(other).shiftLeft(1);
+        if (approx.equals(goog.math.Long.ZERO)) {
+          return other.isNegative() ? goog.math.Long.ONE : goog.math.Long.NEG_ONE;
+        } else {
+          var rem = this.subtract(other.multiply(approx));
+          var result = approx.add(rem.div(other));
+          return result;
+        }
+      }
+    } else if (other.equals(goog.math.Long.MIN_VALUE)) {
+      return goog.math.Long.ZERO;
+    }
+
+    if (this.isNegative()) {
+      if (other.isNegative()) {
+        return this.negate().div(other.negate());
+      } else {
+        return this.negate().div(other).negate();
+      }
+    } else if (other.isNegative()) {
+      return this.div(other.negate()).negate();
+    }
+
+    // Repeat the following until the remainder is less than other:  find a
+    // floating-point that approximates remainder / other *from below*, add this
+    // into the result, and subtract it from the remainder.  It is critical that
+    // the approximate value is less than or equal to the real value so that the
+    // remainder never becomes negative.
+    var res = goog.math.Long.ZERO;
+    var rem = this;
+    while (rem.greaterThanOrEqual(other)) {
+      // Approximate the result of division. This may be a little greater or
+      // smaller than the actual value.
+      var approx = Math.max(1, Math.floor(rem.toNumber() / other.toNumber()));
+
+      // We will tweak the approximate result by changing it in the 48-th digit or
+      // the smallest non-fractional digit, whichever is larger.
+      var log2 = Math.ceil(Math.log(approx) / Math.LN2);
+      var delta = (log2 <= 48) ? 1 : Math.pow(2, log2 - 48);
+
+      // Decrease the approximation until it is smaller than the remainder.  Note
+      // that if it is too large, the product overflows and is negative.
+      var approxRes = goog.math.Long.fromNumber(approx);
+      var approxRem = approxRes.multiply(other);
+      while (approxRem.isNegative() || approxRem.greaterThan(rem)) {
+        approx -= delta;
+        approxRes = goog.math.Long.fromNumber(approx);
+        approxRem = approxRes.multiply(other);
+      }
+
+      // We know the answer can't be zero... and actually, zero would cause
+      // infinite recursion since we would make no progress.
+      if (approxRes.isZero()) {
+        approxRes = goog.math.Long.ONE;
+      }
+
+      res = res.add(approxRes);
+      rem = rem.subtract(approxRem);
+    }
+    return res;
+  };
+
+
+  /**
+   * Returns this Long modulo the given one.
+   * @param {goog.math.Long} other Long by which to mod.
+   * @return {!goog.math.Long} This Long modulo the given one.
+   */
+  goog.math.Long.prototype.modulo = function(other) {
+    return this.subtract(this.div(other).multiply(other));
+  };
+
+
+  /** @return {!goog.math.Long} The bitwise-NOT of this value. */
+  goog.math.Long.prototype.not = function() {
+    return goog.math.Long.fromBits(~this.low_, ~this.high_);
+  };
+
+
+  /**
+   * Returns the bitwise-AND of this Long and the given one.
+   * @param {goog.math.Long} other The Long with which to AND.
+   * @return {!goog.math.Long} The bitwise-AND of this and the other.
+   */
+  goog.math.Long.prototype.and = function(other) {
+    return goog.math.Long.fromBits(this.low_ & other.low_,
+                                   this.high_ & other.high_);
+  };
+
+
+  /**
+   * Returns the bitwise-OR of this Long and the given one.
+   * @param {goog.math.Long} other The Long with which to OR.
+   * @return {!goog.math.Long} The bitwise-OR of this and the other.
+   */
+  goog.math.Long.prototype.or = function(other) {
+    return goog.math.Long.fromBits(this.low_ | other.low_,
+                                   this.high_ | other.high_);
+  };
+
+
+  /**
+   * Returns the bitwise-XOR of this Long and the given one.
+   * @param {goog.math.Long} other The Long with which to XOR.
+   * @return {!goog.math.Long} The bitwise-XOR of this and the other.
+   */
+  goog.math.Long.prototype.xor = function(other) {
+    return goog.math.Long.fromBits(this.low_ ^ other.low_,
+                                   this.high_ ^ other.high_);
+  };
+
+
+  /**
+   * Returns this Long with bits shifted to the left by the given amount.
+   * @param {number} numBits The number of bits by which to shift.
+   * @return {!goog.math.Long} This shifted to the left by the given amount.
+   */
+  goog.math.Long.prototype.shiftLeft = function(numBits) {
+    numBits &= 63;
+    if (numBits == 0) {
+      return this;
+    } else {
+      var low = this.low_;
+      if (numBits < 32) {
+        var high = this.high_;
+        return goog.math.Long.fromBits(
+            low << numBits,
+            (high << numBits) | (low >>> (32 - numBits)));
+      } else {
+        return goog.math.Long.fromBits(0, low << (numBits - 32));
+      }
+    }
+  };
+
+
+  /**
+   * Returns this Long with bits shifted to the right by the given amount.
+   * @param {number} numBits The number of bits by which to shift.
+   * @return {!goog.math.Long} This shifted to the right by the given amount.
+   */
+  goog.math.Long.prototype.shiftRight = function(numBits) {
+    numBits &= 63;
+    if (numBits == 0) {
+      return this;
+    } else {
+      var high = this.high_;
+      if (numBits < 32) {
+        var low = this.low_;
+        return goog.math.Long.fromBits(
+            (low >>> numBits) | (high << (32 - numBits)),
+            high >> numBits);
+      } else {
+        return goog.math.Long.fromBits(
+            high >> (numBits - 32),
+            high >= 0 ? 0 : -1);
+      }
+    }
+  };
+
+
+  /**
+   * Returns this Long with bits shifted to the right by the given amount, with
+   * the new top bits matching the current sign bit.
+   * @param {number} numBits The number of bits by which to shift.
+   * @return {!goog.math.Long} This shifted to the right by the given amount, with
+   *     zeros placed into the new leading bits.
+   */
+  goog.math.Long.prototype.shiftRightUnsigned = function(numBits) {
+    numBits &= 63;
+    if (numBits == 0) {
+      return this;
+    } else {
+      var high = this.high_;
+      if (numBits < 32) {
+        var low = this.low_;
+        return goog.math.Long.fromBits(
+            (low >>> numBits) | (high << (32 - numBits)),
+            high >>> numBits);
+      } else if (numBits == 32) {
+        return goog.math.Long.fromBits(high, 0);
+      } else {
+        return goog.math.Long.fromBits(high >>> (numBits - 32), 0);
+      }
+    }
+  };
+
+  //======= begin jsbn =======
+
+  var navigator = { appName: 'Modern Browser' }; // polyfill a little
+
+  // Copyright (c) 2005  Tom Wu
+  // All Rights Reserved.
+  // http://www-cs-students.stanford.edu/~tjw/jsbn/
+
+  /*
+   * Copyright (c) 2003-2005  Tom Wu
+   * All Rights Reserved.
+   *
+   * Permission is hereby granted, free of charge, to any person obtaining
+   * a copy of this software and associated documentation files (the
+   * "Software"), to deal in the Software without restriction, including
+   * without limitation the rights to use, copy, modify, merge, publish,
+   * distribute, sublicense, and/or sell copies of the Software, and to
+   * permit persons to whom the Software is furnished to do so, subject to
+   * the following conditions:
+   *
+   * The above copyright notice and this permission notice shall be
+   * included in all copies or substantial portions of the Software.
+   *
+   * THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+   * EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+   * WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+   *
+   * IN NO EVENT SHALL TOM WU BE LIABLE FOR ANY SPECIAL, INCIDENTAL,
+   * INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND, OR ANY DAMAGES WHATSOEVER
+   * RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER OR NOT ADVISED OF
+   * THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF LIABILITY, ARISING OUT
+   * OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+   *
+   * In addition, the following condition applies:
+   *
+   * All redistributions must retain an intact copy of this copyright notice
+   * and disclaimer.
+   */
+
+  // Basic JavaScript BN library - subset useful for RSA encryption.
+
+  // Bits per digit
+  var dbits;
+
+  // JavaScript engine analysis
+  var canary = 0xdeadbeefcafe;
+  var j_lm = ((canary&0xffffff)==0xefcafe);
+
+  // (public) Constructor
+  function BigInteger(a,b,c) {
+    if(a != null)
+      if("number" == typeof a) this.fromNumber(a,b,c);
+      else if(b == null && "string" != typeof a) this.fromString(a,256);
+      else this.fromString(a,b);
+  }
+
+  // return new, unset BigInteger
+  function nbi() { return new BigInteger(null); }
+
+  // am: Compute w_j += (x*this_i), propagate carries,
+  // c is initial carry, returns final carry.
+  // c < 3*dvalue, x < 2*dvalue, this_i < dvalue
+  // We need to select the fastest one that works in this environment.
+
+  // am1: use a single mult and divide to get the high bits,
+  // max digit bits should be 26 because
+  // max internal value = 2*dvalue^2-2*dvalue (< 2^53)
+  function am1(i,x,w,j,c,n) {
+    while(--n >= 0) {
+      var v = x*this[i++]+w[j]+c;
+      c = Math.floor(v/0x4000000);
+      w[j++] = v&0x3ffffff;
+    }
+    return c;
+  }
+  // am2 avoids a big mult-and-extract completely.
+  // Max digit bits should be <= 30 because we do bitwise ops
+  // on values up to 2*hdvalue^2-hdvalue-1 (< 2^31)
+  function am2(i,x,w,j,c,n) {
+    var xl = x&0x7fff, xh = x>>15;
+    while(--n >= 0) {
+      var l = this[i]&0x7fff;
+      var h = this[i++]>>15;
+      var m = xh*l+h*xl;
+      l = xl*l+((m&0x7fff)<<15)+w[j]+(c&0x3fffffff);
+      c = (l>>>30)+(m>>>15)+xh*h+(c>>>30);
+      w[j++] = l&0x3fffffff;
+    }
+    return c;
+  }
+  // Alternately, set max digit bits to 28 since some
+  // browsers slow down when dealing with 32-bit numbers.
+  function am3(i,x,w,j,c,n) {
+    var xl = x&0x3fff, xh = x>>14;
+    while(--n >= 0) {
+      var l = this[i]&0x3fff;
+      var h = this[i++]>>14;
+      var m = xh*l+h*xl;
+      l = xl*l+((m&0x3fff)<<14)+w[j]+c;
+      c = (l>>28)+(m>>14)+xh*h;
+      w[j++] = l&0xfffffff;
+    }
+    return c;
+  }
+  if(j_lm && (navigator.appName == "Microsoft Internet Explorer")) {
+    BigInteger.prototype.am = am2;
+    dbits = 30;
+  }
+  else if(j_lm && (navigator.appName != "Netscape")) {
+    BigInteger.prototype.am = am1;
+    dbits = 26;
+  }
+  else { // Mozilla/Netscape seems to prefer am3
+    BigInteger.prototype.am = am3;
+    dbits = 28;
+  }
+
+  BigInteger.prototype.DB = dbits;
+  BigInteger.prototype.DM = ((1<<dbits)-1);
+  BigInteger.prototype.DV = (1<<dbits);
+
+  var BI_FP = 52;
+  BigInteger.prototype.FV = Math.pow(2,BI_FP);
+  BigInteger.prototype.F1 = BI_FP-dbits;
+  BigInteger.prototype.F2 = 2*dbits-BI_FP;
+
+  // Digit conversions
+  var BI_RM = "0123456789abcdefghijklmnopqrstuvwxyz";
+  var BI_RC = new Array();
+  var rr,vv;
+  rr = "0".charCodeAt(0);
+  for(vv = 0; vv <= 9; ++vv) BI_RC[rr++] = vv;
+  rr = "a".charCodeAt(0);
+  for(vv = 10; vv < 36; ++vv) BI_RC[rr++] = vv;
+  rr = "A".charCodeAt(0);
+  for(vv = 10; vv < 36; ++vv) BI_RC[rr++] = vv;
+
+  function int2char(n) { return BI_RM.charAt(n); }
+  function intAt(s,i) {
+    var c = BI_RC[s.charCodeAt(i)];
+    return (c==null)?-1:c;
+  }
+
+  // (protected) copy this to r
+  function bnpCopyTo(r) {
+    for(var i = this.t-1; i >= 0; --i) r[i] = this[i];
+    r.t = this.t;
+    r.s = this.s;
+  }
+
+  // (protected) set from integer value x, -DV <= x < DV
+  function bnpFromInt(x) {
+    this.t = 1;
+    this.s = (x<0)?-1:0;
+    if(x > 0) this[0] = x;
+    else if(x < -1) this[0] = x+DV;
+    else this.t = 0;
+  }
+
+  // return bigint initialized to value
+  function nbv(i) { var r = nbi(); r.fromInt(i); return r; }
+
+  // (protected) set from string and radix
+  function bnpFromString(s,b) {
+    var k;
+    if(b == 16) k = 4;
+    else if(b == 8) k = 3;
+    else if(b == 256) k = 8; // byte array
+    else if(b == 2) k = 1;
+    else if(b == 32) k = 5;
+    else if(b == 4) k = 2;
+    else { this.fromRadix(s,b); return; }
+    this.t = 0;
+    this.s = 0;
+    var i = s.length, mi = false, sh = 0;
+    while(--i >= 0) {
+      var x = (k==8)?s[i]&0xff:intAt(s,i);
+      if(x < 0) {
+        if(s.charAt(i) == "-") mi = true;
+        continue;
+      }
+      mi = false;
+      if(sh == 0)
+        this[this.t++] = x;
+      else if(sh+k > this.DB) {
+        this[this.t-1] |= (x&((1<<(this.DB-sh))-1))<<sh;
+        this[this.t++] = (x>>(this.DB-sh));
+      }
+      else
+        this[this.t-1] |= x<<sh;
+      sh += k;
+      if(sh >= this.DB) sh -= this.DB;
+    }
+    if(k == 8 && (s[0]&0x80) != 0) {
+      this.s = -1;
+      if(sh > 0) this[this.t-1] |= ((1<<(this.DB-sh))-1)<<sh;
+    }
+    this.clamp();
+    if(mi) BigInteger.ZERO.subTo(this,this);
+  }
+
+  // (protected) clamp off excess high words
+  function bnpClamp() {
+    var c = this.s&this.DM;
+    while(this.t > 0 && this[this.t-1] == c) --this.t;
+  }
+
+  // (public) return string representation in given radix
+  function bnToString(b) {
+    if(this.s < 0) return "-"+this.negate().toString(b);
+    var k;
+    if(b == 16) k = 4;
+    else if(b == 8) k = 3;
+    else if(b == 2) k = 1;
+    else if(b == 32) k = 5;
+    else if(b == 4) k = 2;
+    else return this.toRadix(b);
+    var km = (1<<k)-1, d, m = false, r = "", i = this.t;
+    var p = this.DB-(i*this.DB)%k;
+    if(i-- > 0) {
+      if(p < this.DB && (d = this[i]>>p) > 0) { m = true; r = int2char(d); }
+      while(i >= 0) {
+        if(p < k) {
+          d = (this[i]&((1<<p)-1))<<(k-p);
+          d |= this[--i]>>(p+=this.DB-k);
+        }
+        else {
+          d = (this[i]>>(p-=k))&km;
+          if(p <= 0) { p += this.DB; --i; }
+        }
+        if(d > 0) m = true;
+        if(m) r += int2char(d);
+      }
+    }
+    return m?r:"0";
+  }
+
+  // (public) -this
+  function bnNegate() { var r = nbi(); BigInteger.ZERO.subTo(this,r); return r; }
+
+  // (public) |this|
+  function bnAbs() { return (this.s<0)?this.negate():this; }
+
+  // (public) return + if this > a, - if this < a, 0 if equal
+  function bnCompareTo(a) {
+    var r = this.s-a.s;
+    if(r != 0) return r;
+    var i = this.t;
+    r = i-a.t;
+    if(r != 0) return (this.s<0)?-r:r;
+    while(--i >= 0) if((r=this[i]-a[i]) != 0) return r;
+    return 0;
+  }
+
+  // returns bit length of the integer x
+  function nbits(x) {
+    var r = 1, t;
+    if((t=x>>>16) != 0) { x = t; r += 16; }
+    if((t=x>>8) != 0) { x = t; r += 8; }
+    if((t=x>>4) != 0) { x = t; r += 4; }
+    if((t=x>>2) != 0) { x = t; r += 2; }
+    if((t=x>>1) != 0) { x = t; r += 1; }
+    return r;
+  }
+
+  // (public) return the number of bits in "this"
+  function bnBitLength() {
+    if(this.t <= 0) return 0;
+    return this.DB*(this.t-1)+nbits(this[this.t-1]^(this.s&this.DM));
+  }
+
+  // (protected) r = this << n*DB
+  function bnpDLShiftTo(n,r) {
+    var i;
+    for(i = this.t-1; i >= 0; --i) r[i+n] = this[i];
+    for(i = n-1; i >= 0; --i) r[i] = 0;
+    r.t = this.t+n;
+    r.s = this.s;
+  }
+
+  // (protected) r = this >> n*DB
+  function bnpDRShiftTo(n,r) {
+    for(var i = n; i < this.t; ++i) r[i-n] = this[i];
+    r.t = Math.max(this.t-n,0);
+    r.s = this.s;
+  }
+
+  // (protected) r = this << n
+  function bnpLShiftTo(n,r) {
+    var bs = n%this.DB;
+    var cbs = this.DB-bs;
+    var bm = (1<<cbs)-1;
+    var ds = Math.floor(n/this.DB), c = (this.s<<bs)&this.DM, i;
+    for(i = this.t-1; i >= 0; --i) {
+      r[i+ds+1] = (this[i]>>cbs)|c;
+      c = (this[i]&bm)<<bs;
+    }
+    for(i = ds-1; i >= 0; --i) r[i] = 0;
+    r[ds] = c;
+    r.t = this.t+ds+1;
+    r.s = this.s;
+    r.clamp();
+  }
+
+  // (protected) r = this >> n
+  function bnpRShiftTo(n,r) {
+    r.s = this.s;
+    var ds = Math.floor(n/this.DB);
+    if(ds >= this.t) { r.t = 0; return; }
+    var bs = n%this.DB;
+    var cbs = this.DB-bs;
+    var bm = (1<<bs)-1;
+    r[0] = this[ds]>>bs;
+    for(var i = ds+1; i < this.t; ++i) {
+      r[i-ds-1] |= (this[i]&bm)<<cbs;
+      r[i-ds] = this[i]>>bs;
+    }
+    if(bs > 0) r[this.t-ds-1] |= (this.s&bm)<<cbs;
+    r.t = this.t-ds;
+    r.clamp();
+  }
+
+  // (protected) r = this - a
+  function bnpSubTo(a,r) {
+    var i = 0, c = 0, m = Math.min(a.t,this.t);
+    while(i < m) {
+      c += this[i]-a[i];
+      r[i++] = c&this.DM;
+      c >>= this.DB;
+    }
+    if(a.t < this.t) {
+      c -= a.s;
+      while(i < this.t) {
+        c += this[i];
+        r[i++] = c&this.DM;
+        c >>= this.DB;
+      }
+      c += this.s;
+    }
+    else {
+      c += this.s;
+      while(i < a.t) {
+        c -= a[i];
+        r[i++] = c&this.DM;
+        c >>= this.DB;
+      }
+      c -= a.s;
+    }
+    r.s = (c<0)?-1:0;
+    if(c < -1) r[i++] = this.DV+c;
+    else if(c > 0) r[i++] = c;
+    r.t = i;
+    r.clamp();
+  }
+
+  // (protected) r = this * a, r != this,a (HAC 14.12)
+  // "this" should be the larger one if appropriate.
+  function bnpMultiplyTo(a,r) {
+    var x = this.abs(), y = a.abs();
+    var i = x.t;
+    r.t = i+y.t;
+    while(--i >= 0) r[i] = 0;
+    for(i = 0; i < y.t; ++i) r[i+x.t] = x.am(0,y[i],r,i,0,x.t);
+    r.s = 0;
+    r.clamp();
+    if(this.s != a.s) BigInteger.ZERO.subTo(r,r);
+  }
+
+  // (protected) r = this^2, r != this (HAC 14.16)
+  function bnpSquareTo(r) {
+    var x = this.abs();
+    var i = r.t = 2*x.t;
+    while(--i >= 0) r[i] = 0;
+    for(i = 0; i < x.t-1; ++i) {
+      var c = x.am(i,x[i],r,2*i,0,1);
+      if((r[i+x.t]+=x.am(i+1,2*x[i],r,2*i+1,c,x.t-i-1)) >= x.DV) {
+        r[i+x.t] -= x.DV;
+        r[i+x.t+1] = 1;
+      }
+    }
+    if(r.t > 0) r[r.t-1] += x.am(i,x[i],r,2*i,0,1);
+    r.s = 0;
+    r.clamp();
+  }
+
+  // (protected) divide this by m, quotient and remainder to q, r (HAC 14.20)
+  // r != q, this != m.  q or r may be null.
+  function bnpDivRemTo(m,q,r) {
+    var pm = m.abs();
+    if(pm.t <= 0) return;
+    var pt = this.abs();
+    if(pt.t < pm.t) {
+      if(q != null) q.fromInt(0);
+      if(r != null) this.copyTo(r);
+      return;
+    }
+    if(r == null) r = nbi();
+    var y = nbi(), ts = this.s, ms = m.s;
+    var nsh = this.DB-nbits(pm[pm.t-1]);	// normalize modulus
+    if(nsh > 0) { pm.lShiftTo(nsh,y); pt.lShiftTo(nsh,r); }
+    else { pm.copyTo(y); pt.copyTo(r); }
+    var ys = y.t;
+    var y0 = y[ys-1];
+    if(y0 == 0) return;
+    var yt = y0*(1<<this.F1)+((ys>1)?y[ys-2]>>this.F2:0);
+    var d1 = this.FV/yt, d2 = (1<<this.F1)/yt, e = 1<<this.F2;
+    var i = r.t, j = i-ys, t = (q==null)?nbi():q;
+    y.dlShiftTo(j,t);
+    if(r.compareTo(t) >= 0) {
+      r[r.t++] = 1;
+      r.subTo(t,r);
+    }
+    BigInteger.ONE.dlShiftTo(ys,t);
+    t.subTo(y,y);	// "negative" y so we can replace sub with am later
+    while(y.t < ys) y[y.t++] = 0;
+    while(--j >= 0) {
+      // Estimate quotient digit
+      var qd = (r[--i]==y0)?this.DM:Math.floor(r[i]*d1+(r[i-1]+e)*d2);
+      if((r[i]+=y.am(0,qd,r,j,0,ys)) < qd) {	// Try it out
+        y.dlShiftTo(j,t);
+        r.subTo(t,r);
+        while(r[i] < --qd) r.subTo(t,r);
+      }
+    }
+    if(q != null) {
+      r.drShiftTo(ys,q);
+      if(ts != ms) BigInteger.ZERO.subTo(q,q);
+    }
+    r.t = ys;
+    r.clamp();
+    if(nsh > 0) r.rShiftTo(nsh,r);	// Denormalize remainder
+    if(ts < 0) BigInteger.ZERO.subTo(r,r);
+  }
+
+  // (public) this mod a
+  function bnMod(a) {
+    var r = nbi();
+    this.abs().divRemTo(a,null,r);
+    if(this.s < 0 && r.compareTo(BigInteger.ZERO) > 0) a.subTo(r,r);
+    return r;
+  }
+
+  // Modular reduction using "classic" algorithm
+  function Classic(m) { this.m = m; }
+  function cConvert(x) {
+    if(x.s < 0 || x.compareTo(this.m) >= 0) return x.mod(this.m);
+    else return x;
+  }
+  function cRevert(x) { return x; }
+  function cReduce(x) { x.divRemTo(this.m,null,x); }
+  function cMulTo(x,y,r) { x.multiplyTo(y,r); this.reduce(r); }
+  function cSqrTo(x,r) { x.squareTo(r); this.reduce(r); }
+
+  Classic.prototype.convert = cConvert;
+  Classic.prototype.revert = cRevert;
+  Classic.prototype.reduce = cReduce;
+  Classic.prototype.mulTo = cMulTo;
+  Classic.prototype.sqrTo = cSqrTo;
+
+  // (protected) return "-1/this % 2^DB"; useful for Mont. reduction
+  // justification:
+  //         xy == 1 (mod m)
+  //         xy =  1+km
+  //   xy(2-xy) = (1+km)(1-km)
+  // x[y(2-xy)] = 1-k^2m^2
+  // x[y(2-xy)] == 1 (mod m^2)
+  // if y is 1/x mod m, then y(2-xy) is 1/x mod m^2
+  // should reduce x and y(2-xy) by m^2 at each step to keep size bounded.
+  // JS multiply "overflows" differently from C/C++, so care is needed here.
+  function bnpInvDigit() {
+    if(this.t < 1) return 0;
+    var x = this[0];
+    if((x&1) == 0) return 0;
+    var y = x&3;		// y == 1/x mod 2^2
+    y = (y*(2-(x&0xf)*y))&0xf;	// y == 1/x mod 2^4
+    y = (y*(2-(x&0xff)*y))&0xff;	// y == 1/x mod 2^8
+    y = (y*(2-(((x&0xffff)*y)&0xffff)))&0xffff;	// y == 1/x mod 2^16
+    // last step - calculate inverse mod DV directly;
+    // assumes 16 < DB <= 32 and assumes ability to handle 48-bit ints
+    y = (y*(2-x*y%this.DV))%this.DV;		// y == 1/x mod 2^dbits
+    // we really want the negative inverse, and -DV < y < DV
+    return (y>0)?this.DV-y:-y;
+  }
+
+  // Montgomery reduction
+  function Montgomery(m) {
+    this.m = m;
+    this.mp = m.invDigit();
+    this.mpl = this.mp&0x7fff;
+    this.mph = this.mp>>15;
+    this.um = (1<<(m.DB-15))-1;
+    this.mt2 = 2*m.t;
+  }
+
+  // xR mod m
+  function montConvert(x) {
+    var r = nbi();
+    x.abs().dlShiftTo(this.m.t,r);
+    r.divRemTo(this.m,null,r);
+    if(x.s < 0 && r.compareTo(BigInteger.ZERO) > 0) this.m.subTo(r,r);
+    return r;
+  }
+
+  // x/R mod m
+  function montRevert(x) {
+    var r = nbi();
+    x.copyTo(r);
+    this.reduce(r);
+    return r;
+  }
+
+  // x = x/R mod m (HAC 14.32)
+  function montReduce(x) {
+    while(x.t <= this.mt2)	// pad x so am has enough room later
+      x[x.t++] = 0;
+    for(var i = 0; i < this.m.t; ++i) {
+      // faster way of calculating u0 = x[i]*mp mod DV
+      var j = x[i]&0x7fff;
+      var u0 = (j*this.mpl+(((j*this.mph+(x[i]>>15)*this.mpl)&this.um)<<15))&x.DM;
+      // use am to combine the multiply-shift-add into one call
+      j = i+this.m.t;
+      x[j] += this.m.am(0,u0,x,i,0,this.m.t);
+      // propagate carry
+      while(x[j] >= x.DV) { x[j] -= x.DV; x[++j]++; }
+    }
+    x.clamp();
+    x.drShiftTo(this.m.t,x);
+    if(x.compareTo(this.m) >= 0) x.subTo(this.m,x);
+  }
+
+  // r = "x^2/R mod m"; x != r
+  function montSqrTo(x,r) { x.squareTo(r); this.reduce(r); }
+
+  // r = "xy/R mod m"; x,y != r
+  function montMulTo(x,y,r) { x.multiplyTo(y,r); this.reduce(r); }
+
+  Montgomery.prototype.convert = montConvert;
+  Montgomery.prototype.revert = montRevert;
+  Montgomery.prototype.reduce = montReduce;
+  Montgomery.prototype.mulTo = montMulTo;
+  Montgomery.prototype.sqrTo = montSqrTo;
+
+  // (protected) true iff this is even
+  function bnpIsEven() { return ((this.t>0)?(this[0]&1):this.s) == 0; }
+
+  // (protected) this^e, e < 2^32, doing sqr and mul with "r" (HAC 14.79)
+  function bnpExp(e,z) {
+    if(e > 0xffffffff || e < 1) return BigInteger.ONE;
+    var r = nbi(), r2 = nbi(), g = z.convert(this), i = nbits(e)-1;
+    g.copyTo(r);
+    while(--i >= 0) {
+      z.sqrTo(r,r2);
+      if((e&(1<<i)) > 0) z.mulTo(r2,g,r);
+      else { var t = r; r = r2; r2 = t; }
+    }
+    return z.revert(r);
+  }
+
+  // (public) this^e % m, 0 <= e < 2^32
+  function bnModPowInt(e,m) {
+    var z;
+    if(e < 256 || m.isEven()) z = new Classic(m); else z = new Montgomery(m);
+    return this.exp(e,z);
+  }
+
+  // protected
+  BigInteger.prototype.copyTo = bnpCopyTo;
+  BigInteger.prototype.fromInt = bnpFromInt;
+  BigInteger.prototype.fromString = bnpFromString;
+  BigInteger.prototype.clamp = bnpClamp;
+  BigInteger.prototype.dlShiftTo = bnpDLShiftTo;
+  BigInteger.prototype.drShiftTo = bnpDRShiftTo;
+  BigInteger.prototype.lShiftTo = bnpLShiftTo;
+  BigInteger.prototype.rShiftTo = bnpRShiftTo;
+  BigInteger.prototype.subTo = bnpSubTo;
+  BigInteger.prototype.multiplyTo = bnpMultiplyTo;
+  BigInteger.prototype.squareTo = bnpSquareTo;
+  BigInteger.prototype.divRemTo = bnpDivRemTo;
+  BigInteger.prototype.invDigit = bnpInvDigit;
+  BigInteger.prototype.isEven = bnpIsEven;
+  BigInteger.prototype.exp = bnpExp;
+
+  // public
+  BigInteger.prototype.toString = bnToString;
+  BigInteger.prototype.negate = bnNegate;
+  BigInteger.prototype.abs = bnAbs;
+  BigInteger.prototype.compareTo = bnCompareTo;
+  BigInteger.prototype.bitLength = bnBitLength;
+  BigInteger.prototype.mod = bnMod;
+  BigInteger.prototype.modPowInt = bnModPowInt;
+
+  // "constants"
+  BigInteger.ZERO = nbv(0);
+  BigInteger.ONE = nbv(1);
+
+  // jsbn2 stuff
+
+  // (protected) convert from radix string
+  function bnpFromRadix(s,b) {
+    this.fromInt(0);
+    if(b == null) b = 10;
+    var cs = this.chunkSize(b);
+    var d = Math.pow(b,cs), mi = false, j = 0, w = 0;
+    for(var i = 0; i < s.length; ++i) {
+      var x = intAt(s,i);
+      if(x < 0) {
+        if(s.charAt(i) == "-" && this.signum() == 0) mi = true;
+        continue;
+      }
+      w = b*w+x;
+      if(++j >= cs) {
+        this.dMultiply(d);
+        this.dAddOffset(w,0);
+        j = 0;
+        w = 0;
+      }
+    }
+    if(j > 0) {
+      this.dMultiply(Math.pow(b,j));
+      this.dAddOffset(w,0);
+    }
+    if(mi) BigInteger.ZERO.subTo(this,this);
+  }
+
+  // (protected) return x s.t. r^x < DV
+  function bnpChunkSize(r) { return Math.floor(Math.LN2*this.DB/Math.log(r)); }
+
+  // (public) 0 if this == 0, 1 if this > 0
+  function bnSigNum() {
+    if(this.s < 0) return -1;
+    else if(this.t <= 0 || (this.t == 1 && this[0] <= 0)) return 0;
+    else return 1;
+  }
+
+  // (protected) this *= n, this >= 0, 1 < n < DV
+  function bnpDMultiply(n) {
+    this[this.t] = this.am(0,n-1,this,0,0,this.t);
+    ++this.t;
+    this.clamp();
+  }
+
+  // (protected) this += n << w words, this >= 0
+  function bnpDAddOffset(n,w) {
+    if(n == 0) return;
+    while(this.t <= w) this[this.t++] = 0;
+    this[w] += n;
+    while(this[w] >= this.DV) {
+      this[w] -= this.DV;
+      if(++w >= this.t) this[this.t++] = 0;
+      ++this[w];
+    }
+  }
+
+  // (protected) convert to radix string
+  function bnpToRadix(b) {
+    if(b == null) b = 10;
+    if(this.signum() == 0 || b < 2 || b > 36) return "0";
+    var cs = this.chunkSize(b);
+    var a = Math.pow(b,cs);
+    var d = nbv(a), y = nbi(), z = nbi(), r = "";
+    this.divRemTo(d,y,z);
+    while(y.signum() > 0) {
+      r = (a+z.intValue()).toString(b).substr(1) + r;
+      y.divRemTo(d,y,z);
+    }
+    return z.intValue().toString(b) + r;
+  }
+
+  // (public) return value as integer
+  function bnIntValue() {
+    if(this.s < 0) {
+      if(this.t == 1) return this[0]-this.DV;
+      else if(this.t == 0) return -1;
+    }
+    else if(this.t == 1) return this[0];
+    else if(this.t == 0) return 0;
+    // assumes 16 < DB < 32
+    return ((this[1]&((1<<(32-this.DB))-1))<<this.DB)|this[0];
+  }
+
+  // (protected) r = this + a
+  function bnpAddTo(a,r) {
+    var i = 0, c = 0, m = Math.min(a.t,this.t);
+    while(i < m) {
+      c += this[i]+a[i];
+      r[i++] = c&this.DM;
+      c >>= this.DB;
+    }
+    if(a.t < this.t) {
+      c += a.s;
+      while(i < this.t) {
+        c += this[i];
+        r[i++] = c&this.DM;
+        c >>= this.DB;
+      }
+      c += this.s;
+    }
+    else {
+      c += this.s;
+      while(i < a.t) {
+        c += a[i];
+        r[i++] = c&this.DM;
+        c >>= this.DB;
+      }
+      c += a.s;
+    }
+    r.s = (c<0)?-1:0;
+    if(c > 0) r[i++] = c;
+    else if(c < -1) r[i++] = this.DV+c;
+    r.t = i;
+    r.clamp();
+  }
+
+  BigInteger.prototype.fromRadix = bnpFromRadix;
+  BigInteger.prototype.chunkSize = bnpChunkSize;
+  BigInteger.prototype.signum = bnSigNum;
+  BigInteger.prototype.dMultiply = bnpDMultiply;
+  BigInteger.prototype.dAddOffset = bnpDAddOffset;
+  BigInteger.prototype.toRadix = bnpToRadix;
+  BigInteger.prototype.intValue = bnIntValue;
+  BigInteger.prototype.addTo = bnpAddTo;
+
+  //======= end jsbn =======
+
+  // Emscripten wrapper
+  var Wrapper = {
+    abs: function(l, h) {
+      var x = new goog.math.Long(l, h);
+      var ret;
+      if (x.isNegative()) {
+        ret = x.negate();
+      } else {
+        ret = x;
+      }
+      HEAP32[tempDoublePtr>>2] = ret.low_;
+      HEAP32[tempDoublePtr+4>>2] = ret.high_;
+    },
+    ensureTemps: function() {
+      if (Wrapper.ensuredTemps) return;
+      Wrapper.ensuredTemps = true;
+      Wrapper.two32 = new BigInteger();
+      Wrapper.two32.fromString('4294967296', 10);
+      Wrapper.two64 = new BigInteger();
+      Wrapper.two64.fromString('18446744073709551616', 10);
+      Wrapper.temp1 = new BigInteger();
+      Wrapper.temp2 = new BigInteger();
+    },
+    lh2bignum: function(l, h) {
+      var a = new BigInteger();
+      a.fromString(h.toString(), 10);
+      var b = new BigInteger();
+      a.multiplyTo(Wrapper.two32, b);
+      var c = new BigInteger();
+      c.fromString(l.toString(), 10);
+      var d = new BigInteger();
+      c.addTo(b, d);
+      return d;
+    },
+    stringify: function(l, h, unsigned) {
+      var ret = new goog.math.Long(l, h).toString();
+      if (unsigned && ret[0] == '-') {
+        // unsign slowly using jsbn bignums
+        Wrapper.ensureTemps();
+        var bignum = new BigInteger();
+        bignum.fromString(ret, 10);
+        ret = new BigInteger();
+        Wrapper.two64.addTo(bignum, ret);
+        ret = ret.toString(10);
+      }
+      return ret;
+    },
+    fromString: function(str, base, min, max, unsigned) {
+      Wrapper.ensureTemps();
+      var bignum = new BigInteger();
+      bignum.fromString(str, base);
+      var bigmin = new BigInteger();
+      bigmin.fromString(min, 10);
+      var bigmax = new BigInteger();
+      bigmax.fromString(max, 10);
+      if (unsigned && bignum.compareTo(BigInteger.ZERO) < 0) {
+        var temp = new BigInteger();
+        bignum.addTo(Wrapper.two64, temp);
+        bignum = temp;
+      }
+      var error = false;
+      if (bignum.compareTo(bigmin) < 0) {
+        bignum = bigmin;
+        error = true;
+      } else if (bignum.compareTo(bigmax) > 0) {
+        bignum = bigmax;
+        error = true;
+      }
+      var ret = goog.math.Long.fromString(bignum.toString()); // min-max checks should have clamped this to a range goog.math.Long can handle well
+      HEAP32[tempDoublePtr>>2] = ret.low_;
+      HEAP32[tempDoublePtr+4>>2] = ret.high_;
+      if (error) throw 'range error';
+    }
+  };
+  return Wrapper;
+})();
+
+//======= end closure i64 code =======
+
+
 
 // === Auto-generated postamble setup entry stuff ===
 

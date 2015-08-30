@@ -702,7 +702,7 @@ public abstract class Structure {
 
         // Update native FFI type information, if needed
         if (this instanceof ByValue) {
-            getTypeInfo();
+//            getTypeInfo();
         }
 
         // Avoid redundant writes
@@ -1190,7 +1190,7 @@ public abstract class Structure {
             int size = addPadding(calculatedSize, info.alignment);
             // Update native FFI type information, if needed
             if (this instanceof ByValue && !avoidFFIType) {
-                getTypeInfo();
+//                getTypeInfo();
             }
             info.size = size;
             return info;
@@ -1506,25 +1506,25 @@ public abstract class Structure {
     }
 
     /** Override to supply native type information for the given field. */
-    Pointer getFieldTypeInfo(StructField f) {
-        Class type = f.type;
-        Object value = getFieldValue(f.field);
-        if (typeMapper != null) {
-            ToNativeConverter nc = typeMapper.getToNativeConverter(type);
-            if (nc != null) {
-                type = nc.nativeType();
-                value = nc.toNative(value, new ToNativeContext());
-            }
-        }
-        return FFIType.get(value, type);
-    }
+//    Pointer getFieldTypeInfo(StructField f) {
+//        Class type = f.type;
+//        Object value = getFieldValue(f.field);
+//        if (typeMapper != null) {
+//            ToNativeConverter nc = typeMapper.getToNativeConverter(type);
+//            if (nc != null) {
+//                type = nc.nativeType();
+//                value = nc.toNative(value, new ToNativeContext());
+//            }
+//        }
+//        return FFIType.get(value, type);
+//    }
 
     /** Obtain native type information for this structure. */
-    Pointer getTypeInfo() {
-        Pointer p = getTypeInfo(this);
-        cacheTypeInfo(p);
-        return p;
-    }
+//    Pointer getTypeInfo() {
+//        Pointer p = getTypeInfo(this);
+//        cacheTypeInfo(p);
+//        return p;
+//    }
 
     /** Set whether the structure is automatically synchronized to native memory
         before and after a native function call.  Convenience method for
@@ -1580,9 +1580,9 @@ public abstract class Structure {
     }
 
     /** Exposed for testing purposes only. */
-    static Pointer getTypeInfo(Object obj) {
-        return FFIType.get(obj);
-    }
+//    static Pointer getTypeInfo(Object obj) {
+//        return FFIType.get(obj);
+//    }
 
     /** Called from native code only; same as {@link
      * #newInstance(Class,Pointer)}, except that it additionally calls
@@ -1698,160 +1698,160 @@ public abstract class Structure {
      * structure for use by libffi.  The lifecycle of this structure is easier
      * to manage on the Java side than in native code.
      */
-    static class FFIType extends Structure {
-        public static class size_t extends IntegerType {
-            public size_t() { this(0); }
-            public size_t(long value) { super(Native.SIZE_T_SIZE, value); }
-        }
-        private static Map typeInfoMap = new WeakHashMap();
-        // Native.initIDs initializes these fields to their appropriate
-        // pointer values.  These are in a separate class from FFIType so that
-        // they may be initialized prior to loading the FFIType class
-        private static class FFITypes {
-            private static Pointer ffi_type_void;
-            private static Pointer ffi_type_float;
-            private static Pointer ffi_type_double;
-            private static Pointer ffi_type_longdouble;
-            private static Pointer ffi_type_uint8;
-            private static Pointer ffi_type_sint8;
-            private static Pointer ffi_type_uint16;
-            private static Pointer ffi_type_sint16;
-            private static Pointer ffi_type_uint32;
-            private static Pointer ffi_type_sint32;
-            private static Pointer ffi_type_uint64;
-            private static Pointer ffi_type_sint64;
-            private static Pointer ffi_type_pointer;
-        }
-        static {
-            if (Native.POINTER_SIZE == 0)
-                throw new Error("Native library not initialized");
-            if (FFITypes.ffi_type_void == null)
-                throw new Error("FFI types not initialized");
-            typeInfoMap.put(void.class, FFITypes.ffi_type_void);
-            typeInfoMap.put(Void.class, FFITypes.ffi_type_void);
-            typeInfoMap.put(float.class, FFITypes.ffi_type_float);
-            typeInfoMap.put(Float.class, FFITypes.ffi_type_float);
-            typeInfoMap.put(double.class, FFITypes.ffi_type_double);
-            typeInfoMap.put(Double.class, FFITypes.ffi_type_double);
-            typeInfoMap.put(long.class, FFITypes.ffi_type_sint64);
-            typeInfoMap.put(Long.class, FFITypes.ffi_type_sint64);
-            typeInfoMap.put(int.class, FFITypes.ffi_type_sint32);
-            typeInfoMap.put(Integer.class, FFITypes.ffi_type_sint32);
-            typeInfoMap.put(short.class, FFITypes.ffi_type_sint16);
-            typeInfoMap.put(Short.class, FFITypes.ffi_type_sint16);
-            Pointer ctype = Native.WCHAR_SIZE == 2
-                ? FFITypes.ffi_type_uint16 : FFITypes.ffi_type_uint32;
-            typeInfoMap.put(char.class, ctype);
-            typeInfoMap.put(Character.class, ctype);
-            typeInfoMap.put(byte.class, FFITypes.ffi_type_sint8);
-            typeInfoMap.put(Byte.class, FFITypes.ffi_type_sint8);
-            typeInfoMap.put(Pointer.class, FFITypes.ffi_type_pointer);
-            typeInfoMap.put(String.class, FFITypes.ffi_type_pointer);
-            typeInfoMap.put(WString.class, FFITypes.ffi_type_pointer);
-            typeInfoMap.put(boolean.class, FFITypes.ffi_type_uint32);
-            typeInfoMap.put(Boolean.class, FFITypes.ffi_type_uint32);
-        }
-        // From ffi.h
-        private static final int FFI_TYPE_STRUCT = 13;
-        // Structure fields
-        public size_t size;
-        public short alignment;
-        public short type = FFI_TYPE_STRUCT;
-        public Pointer elements;
-
-        private FFIType(Structure ref) {
-            Pointer[] els;
-            ref.ensureAllocated(true);
-
-            if (ref instanceof Union) {
-                StructField sf = ((Union)ref).typeInfoField();
-                els = new Pointer[] {
-                    get(ref.getFieldValue(sf.field), sf.type),
-                    null,
-                };
-            }
-            else {
-                els = new Pointer[ref.fields().size() + 1];
-                int idx = 0;
-                for (Iterator i=ref.fields().values().iterator();i.hasNext();) {
-                    StructField sf = (StructField)i.next();
-                    els[idx++] = ref.getFieldTypeInfo(sf);
-                }
-            }
-            init(els);
-        }
-        // Represent fixed-size arrays as structures of N identical elements
-        private FFIType(Object array, Class type) {
-            int length = Array.getLength(array);
-            Pointer[] els = new Pointer[length+1];
-            Pointer p = get(null, type.getComponentType());
-            for (int i=0;i < length;i++) {
-                els[i] = p;
-            }
-            init(els);
-        }
-        protected List getFieldOrder() {
-            return Arrays.asList(new String[] { "size", "alignment", "type", "elements" });
-        }
-        private void init(Pointer[] els) {
-            elements = new Memory(Pointer.SIZE * els.length);
-            elements.write(0, els, 0, els.length);
-            write();
-        }
-
-        static Pointer get(Object obj) {
-            if (obj == null)
-                return FFITypes.ffi_type_pointer;
-            if (obj instanceof Class)
-                return get(null, (Class)obj);
-            return get(obj, obj.getClass());
-        }
-
-        private static Pointer get(Object obj, Class cls) {
-            TypeMapper mapper = Native.getTypeMapper(cls);
-            if (mapper != null) {
-                ToNativeConverter nc = mapper.getToNativeConverter(cls);
-                if (nc != null) {
-                    cls = nc.nativeType();
-                }
-            }
-            synchronized(typeInfoMap) {
-                Object o = typeInfoMap.get(cls);
-                if (o instanceof Pointer) {
-                    return (Pointer)o;
-                }
-                if (o instanceof FFIType) {
-                    return ((FFIType)o).getPointer();
-                }
-                if ((Platform.HAS_BUFFERS && Buffer.class.isAssignableFrom(cls))
-                    || Callback.class.isAssignableFrom(cls)) {
-                    typeInfoMap.put(cls, FFITypes.ffi_type_pointer);
-                    return FFITypes.ffi_type_pointer;
-                }
-                if (Structure.class.isAssignableFrom(cls)) {
-                    if (obj == null) obj = newInstance(cls, PLACEHOLDER_MEMORY);
-                    if (ByReference.class.isAssignableFrom(cls)) {
-                        typeInfoMap.put(cls, FFITypes.ffi_type_pointer);
-                        return FFITypes.ffi_type_pointer;
-                    }
-                    FFIType type = new FFIType((Structure)obj);
-                    typeInfoMap.put(cls, type);
-                    return type.getPointer();
-                }
-                if (NativeMapped.class.isAssignableFrom(cls)) {
-                    NativeMappedConverter c = NativeMappedConverter.getInstance(cls);
-                    return get(c.toNative(obj, new ToNativeContext()), c.nativeType());
-                }
-                if (cls.isArray()) {
-                    FFIType type = new FFIType(obj, cls);
-                    // Store it in the map to prevent premature GC of type info
-                    typeInfoMap.put(obj, type);
-                    return type.getPointer();
-                }
-                throw new IllegalArgumentException("Unsupported Structure field type " + cls);
-            }
-        }
-    }
+//    static class FFIType extends Structure {
+//        public static class size_t extends IntegerType {
+//            public size_t() { this(0); }
+//            public size_t(long value) { super(Native.SIZE_T_SIZE, value); }
+//        }
+//        private static Map typeInfoMap = new WeakHashMap();
+//        // Native.initIDs initializes these fields to their appropriate
+//        // pointer values.  These are in a separate class from FFIType so that
+//        // they may be initialized prior to loading the FFIType class
+//        private static class FFITypes {
+//            private static Pointer ffi_type_void;
+//            private static Pointer ffi_type_float;
+//            private static Pointer ffi_type_double;
+//            private static Pointer ffi_type_longdouble;
+//            private static Pointer ffi_type_uint8;
+//            private static Pointer ffi_type_sint8;
+//            private static Pointer ffi_type_uint16;
+//            private static Pointer ffi_type_sint16;
+//            private static Pointer ffi_type_uint32;
+//            private static Pointer ffi_type_sint32;
+//            private static Pointer ffi_type_uint64;
+//            private static Pointer ffi_type_sint64;
+//            private static Pointer ffi_type_pointer;
+//        }
+//        static {
+//            if (Native.POINTER_SIZE == 0)
+//                throw new Error("Native library not initialized");
+//            if (FFITypes.ffi_type_void == null)
+//                throw new Error("FFI types not initialized");
+//            typeInfoMap.put(void.class, FFITypes.ffi_type_void);
+//            typeInfoMap.put(Void.class, FFITypes.ffi_type_void);
+//            typeInfoMap.put(float.class, FFITypes.ffi_type_float);
+//            typeInfoMap.put(Float.class, FFITypes.ffi_type_float);
+//            typeInfoMap.put(double.class, FFITypes.ffi_type_double);
+//            typeInfoMap.put(Double.class, FFITypes.ffi_type_double);
+//            typeInfoMap.put(long.class, FFITypes.ffi_type_sint64);
+//            typeInfoMap.put(Long.class, FFITypes.ffi_type_sint64);
+//            typeInfoMap.put(int.class, FFITypes.ffi_type_sint32);
+//            typeInfoMap.put(Integer.class, FFITypes.ffi_type_sint32);
+//            typeInfoMap.put(short.class, FFITypes.ffi_type_sint16);
+//            typeInfoMap.put(Short.class, FFITypes.ffi_type_sint16);
+//            Pointer ctype = Native.WCHAR_SIZE == 2
+//                ? FFITypes.ffi_type_uint16 : FFITypes.ffi_type_uint32;
+//            typeInfoMap.put(char.class, ctype);
+//            typeInfoMap.put(Character.class, ctype);
+//            typeInfoMap.put(byte.class, FFITypes.ffi_type_sint8);
+//            typeInfoMap.put(Byte.class, FFITypes.ffi_type_sint8);
+//            typeInfoMap.put(Pointer.class, FFITypes.ffi_type_pointer);
+//            typeInfoMap.put(String.class, FFITypes.ffi_type_pointer);
+//            typeInfoMap.put(WString.class, FFITypes.ffi_type_pointer);
+//            typeInfoMap.put(boolean.class, FFITypes.ffi_type_uint32);
+//            typeInfoMap.put(Boolean.class, FFITypes.ffi_type_uint32);
+//        }
+//        // From ffi.h
+//        private static final int FFI_TYPE_STRUCT = 13;
+//        // Structure fields
+//        public size_t size;
+//        public short alignment;
+//        public short type = FFI_TYPE_STRUCT;
+//        public Pointer elements;
+//
+//        private FFIType(Structure ref) {
+//            Pointer[] els;
+//            ref.ensureAllocated(true);
+//
+//            if (ref instanceof Union) {
+//                StructField sf = ((Union)ref).typeInfoField();
+//                els = new Pointer[] {
+//                    get(ref.getFieldValue(sf.field), sf.type),
+//                    null,
+//                };
+//            }
+//            else {
+//                els = new Pointer[ref.fields().size() + 1];
+//                int idx = 0;
+//                for (Iterator i=ref.fields().values().iterator();i.hasNext();) {
+//                    StructField sf = (StructField)i.next();
+//                    els[idx++] = ref.getFieldTypeInfo(sf);
+//                }
+//            }
+//            init(els);
+//        }
+//        // Represent fixed-size arrays as structures of N identical elements
+//        private FFIType(Object array, Class type) {
+//            int length = Array.getLength(array);
+//            Pointer[] els = new Pointer[length+1];
+//            Pointer p = get(null, type.getComponentType());
+//            for (int i=0;i < length;i++) {
+//                els[i] = p;
+//            }
+//            init(els);
+//        }
+//        protected List getFieldOrder() {
+//            return Arrays.asList(new String[] { "size", "alignment", "type", "elements" });
+//        }
+//        private void init(Pointer[] els) {
+//            elements = new Memory(Pointer.SIZE * els.length);
+//            elements.write(0, els, 0, els.length);
+//            write();
+//        }
+//
+//        static Pointer get(Object obj) {
+//            if (obj == null)
+//                return FFITypes.ffi_type_pointer;
+//            if (obj instanceof Class)
+//                return get(null, (Class)obj);
+//            return get(obj, obj.getClass());
+//        }
+//
+//        private static Pointer get(Object obj, Class cls) {
+//            TypeMapper mapper = Native.getTypeMapper(cls);
+//            if (mapper != null) {
+//                ToNativeConverter nc = mapper.getToNativeConverter(cls);
+//                if (nc != null) {
+//                    cls = nc.nativeType();
+//                }
+//            }
+//            synchronized(typeInfoMap) {
+//                Object o = typeInfoMap.get(cls);
+//                if (o instanceof Pointer) {
+//                    return (Pointer)o;
+//                }
+//                if (o instanceof FFIType) {
+//                    return ((FFIType)o).getPointer();
+//                }
+//                if ((Platform.HAS_BUFFERS && Buffer.class.isAssignableFrom(cls))
+//                    || Callback.class.isAssignableFrom(cls)) {
+//                    typeInfoMap.put(cls, FFITypes.ffi_type_pointer);
+//                    return FFITypes.ffi_type_pointer;
+//                }
+//                if (Structure.class.isAssignableFrom(cls)) {
+//                    if (obj == null) obj = newInstance(cls, PLACEHOLDER_MEMORY);
+//                    if (ByReference.class.isAssignableFrom(cls)) {
+//                        typeInfoMap.put(cls, FFITypes.ffi_type_pointer);
+//                        return FFITypes.ffi_type_pointer;
+//                    }
+//                    FFIType type = new FFIType((Structure)obj);
+//                    typeInfoMap.put(cls, type);
+//                    return type.getPointer();
+//                }
+//                if (NativeMapped.class.isAssignableFrom(cls)) {
+//                    NativeMappedConverter c = NativeMappedConverter.getInstance(cls);
+//                    return get(c.toNative(obj, new ToNativeContext()), c.nativeType());
+//                }
+//                if (cls.isArray()) {
+//                    FFIType type = new FFIType(obj, cls);
+//                    // Store it in the map to prevent premature GC of type info
+//                    typeInfoMap.put(obj, type);
+//                    return type.getPointer();
+//                }
+//                throw new IllegalArgumentException("Unsupported Structure field type " + cls);
+//            }
+//        }
+//    }
 
     private static class AutoAllocated extends Memory {
         public AutoAllocated(int size) {
