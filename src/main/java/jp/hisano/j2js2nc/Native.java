@@ -1817,22 +1817,46 @@ public final class Native implements Version {
     static native long indexOf(long addr, byte value);
 
     static void read(long addr, byte[] buf, int index, int length) {
-    	for (int i = 0; i < length; i++) {
-    		buf[index + i] = getByte(addr + i);
-    	}
+        for (int i = 0; i < length; i++) {
+            buf[index + i] = getByte(addr + i);
+        }
     }
 
-    static native void read(long addr, short[] buf, int index, int length);
+    static void read(long addr, short[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            buf[index + i] = getShort(addr + i * 2);
+        }
+    }
 
-    static native void read(long addr, char[] buf, int index, int length);
+    static void read(long addr, char[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            buf[index + i] = getChar(addr + i * 2);
+        }
+    }
 
-    static native void read(long addr, int[] buf, int index, int length);
+    static void read(long addr, int[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            buf[index + i] = getInt(addr + i * 4);
+        }
+    }
 
-    static native void read(long addr, long[] buf, int index, int length);
+    static void read(long addr, long[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            buf[index + i] = getLong(addr + i * 8);
+        }
+    }
 
-    static native void read(long addr, float[] buf, int index, int length);
+    static void read(long addr, float[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            buf[index + i] = getFloat(addr + i * 4);
+        }
+    }
 
-    static native void read(long addr, double[] buf, int index, int length);
+    static void read(long addr, double[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            buf[index + i] = getDouble(addr + i * 8);
+        }
+    }
 
     static void write(long addr, byte[] buf, int index, int length) {
     	for (int i = 0; i < length; i++) {
@@ -1840,23 +1864,49 @@ public final class Native implements Version {
     	}
     }
 
-    static native void write(long addr, short[] buf, int index, int length);
+    static void write(long addr, short[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            setShort(addr + i * 2, buf[index + i]);
+        }
+    }
 
-    static native void write(long addr, char[] buf, int index, int length);
+    static void write(long addr, char[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            setChar(addr + i * 2, buf[index + i]);
+        }
+    }
 
-    static native void write(long addr, int[] buf, int index, int length);
+    static void write(long addr, int[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            setInt(addr + i * 4, buf[index + i]);
+        }
+    }
 
-    static native void write(long addr, long[] buf, int index, int length);
+    static void write(long addr, long[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            setLong(addr + i * 8, buf[index + i]);
+        }
+    }
 
-    static native void write(long addr, float[] buf, int index, int length);
+    static void write(long addr, float[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            setFloat(addr + i * 4, buf[index + i]);
+        }
+    }
 
-    static native void write(long addr, double[] buf, int index, int length);
+    static void write(long addr, double[] buf, int index, int length) {
+        for (int i = 0; i < length; i++) {
+            setDouble(addr + i * 8, buf[index + i]);
+        }
+    }
 
     static byte getByte(long addr) {
     	return ((Number)eval("HEAP8[" + addr + "];")).byteValue();
     }
 
-    static native char getChar(long addr);
+    static char getChar(long addr) {
+        return (char)getShort(addr);
+    }
 
     static short getShort(long addr) {
     	if (addr % 2 != 0) {
@@ -1957,7 +2007,9 @@ public final class Native implements Version {
     	eval("HEAP16[" + (addr / 2) + "] = " + value + ";");
     }
 
-    static native void setChar(long addr, char value);
+    static void setChar(long addr, char value) {
+        setShort(addr, (short)value);
+    }
 
     static void setInt(long addr, int value) {
     	if (addr % 4 != 0) {
@@ -2000,47 +2052,79 @@ public final class Native implements Version {
     }
 
     static Object invoke(String functionName, Object[] arguments) {
-    	try {
-    		List<Object> convertedArguments = new ArrayList<>();
-    		Memory[] allocatedArguments = new Memory[arguments.length];
-    		for (int i = 0; i < arguments.length; i++) {
-    			Object argument = arguments[i];
-    			if (argument instanceof Pointer) {
-    				convertedArguments.add(((Pointer)argument).peer);
-    			} else if (argument instanceof Structure) {
-        			convertedArguments.add(((Structure)argument).getPointer().peer);
-    			} else if (argument instanceof Character) {
-    				convertedArguments.add((short)((Character)argument).charValue());
-    			} else if (argument instanceof Long) {
-    				long value = (Long) argument;
-					convertedArguments.add(value & 0xffffffffL);
-    				convertedArguments.add(value >> 32);
-    			} else if (argument instanceof byte[]) {
-    				byte[] value = (byte[]) argument;
-    				Memory nativeMemory = new Memory(value.length);
-    				nativeMemory.write(0, value, 0, value.length);
-    				allocatedArguments[i] = nativeMemory;
-    				convertedArguments.add(nativeMemory.peer);
-    			} else {
-    				convertedArguments.add(argument);
-    			}
-    		}
-    		
-    		Object result = ((Invocable)NativeLibrary.handle).invokeFunction(functionName, convertedArguments.toArray());
-    		
-    		for (int i = 0; i < arguments.length; i++) {
-    			Object argument = arguments[i];
-    			if (argument instanceof byte[]) {
-    				byte[] value = (byte[])argument;
-					allocatedArguments[i].read(0, value, 0, value.length);
-    			}
-    		}
-    		
-    		return result;
-    	} catch (NoSuchMethodException | ScriptException e) {
-    		e.printStackTrace();
-    		throw new UnsatisfiedLinkError();
-    	}
+        try {
+            List<Object> convertedArguments = new ArrayList<>();
+            Memory[] allocatedArguments = new Memory[arguments.length];
+            for (int i = 0; i < arguments.length; i++) {
+                Object argument = arguments[i];
+                if (argument instanceof Pointer) {
+                    convertedArguments.add(((Pointer) argument).peer);
+                } else if (argument instanceof Structure) {
+                    convertedArguments.add(((Structure) argument).getPointer().peer);
+                } else if (argument instanceof Character) {
+                    convertedArguments.add((short) ((Character) argument).charValue());
+                } else if (argument instanceof Long) {
+                    long value = (Long) argument;
+                    convertedArguments.add(value & 0xffffffffL);
+                    convertedArguments.add(value >> 32);
+                } else if (argument instanceof byte[]) {
+                    byte[] value = (byte[]) argument;
+                    Memory nativeMemory = new Memory(value.length);
+                    nativeMemory.write(0, value, 0, value.length);
+                    allocatedArguments[i] = nativeMemory;
+                    convertedArguments.add(nativeMemory.peer);
+                } else if (argument instanceof short[]) {
+                    short[] value = (short[]) argument;
+                    Memory nativeMemory = new Memory(value.length * 2);
+                    nativeMemory.write(0, value, 0, value.length);
+                    allocatedArguments[i] = nativeMemory;
+                    convertedArguments.add(nativeMemory.peer);
+                } else if (argument instanceof int[]) {
+                    int[] value = (int[]) argument;
+                    Memory nativeMemory = new Memory(value.length * 4);
+                    nativeMemory.write(0, value, 0, value.length);
+                    allocatedArguments[i] = nativeMemory;
+                    convertedArguments.add(nativeMemory.peer);
+                } else if (argument instanceof long[]) {
+                    long[] value = (long[]) argument;
+                    Memory nativeMemory = new Memory(value.length * 8);
+                    nativeMemory.write(0, value, 0, value.length);
+                    allocatedArguments[i] = nativeMemory;
+                    convertedArguments.add(nativeMemory.peer);
+                } else {
+                    convertedArguments.add(argument);
+                }
+            }
+
+            Object result = ((Invocable) NativeLibrary.handle).invokeFunction(functionName,
+                    convertedArguments.toArray());
+
+            for (int i = 0; i < arguments.length; i++) {
+                Object argument = arguments[i];
+                if (argument instanceof byte[]) {
+                    byte[] value = (byte[]) argument;
+                    allocatedArguments[i].read(0, value, 0, value.length);
+                } else if (argument instanceof short[]) {
+                    short[] value = (short[]) argument;
+                    allocatedArguments[i].read(0, value, 0, value.length);
+                } else if (argument instanceof int[]) {
+                    int[] value = (int[]) argument;
+                    allocatedArguments[i].read(0, value, 0, value.length);
+                } else if (argument instanceof long[]) {
+                    long[] value = (long[]) argument;
+                    allocatedArguments[i].read(0, value, 0, value.length);
+                }
+                if (allocatedArguments[i] != null) {
+                    allocatedArguments[i].dispose();
+                }
+            }
+
+            return result;
+        } catch (NoSuchMethodException | ScriptException e) {
+            e.printStackTrace();
+//            throw new UnsatisfiedLinkError();
+            throw new IllegalStateException(e);
+        }
     }
 
     static Object eval(String script) {
