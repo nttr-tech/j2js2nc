@@ -164,7 +164,7 @@ public class Function extends Pointer {
     // Keep a reference to the NativeLibrary so it does not get garbage
     // collected until the function is
     private NativeLibrary library;
-    private final String functionName;
+    private String functionName;
     final String encoding;
     final int callFlags;
     final Map options;
@@ -256,6 +256,9 @@ public class Function extends Pointer {
         return functionName;
     }
 
+    public void setName(String newValue) {
+        functionName = newValue;
+    }
 
     public int getCallingConvention() {
         return callFlags & MASK_CC;

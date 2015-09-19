@@ -2096,8 +2096,15 @@ public final class Native implements Version {
                 }
             }
 
-            Object result = ((Invocable) NativeLibrary.handle).invokeFunction(functionName,
-                    convertedArguments.toArray());
+            Object result;
+            if (functionName.startsWith("dynCall")) {
+                int separatorIndex = functionName.indexOf("@");
+                int functionIndex = Integer.parseInt(functionName.substring(separatorIndex + 1), 16);
+                convertedArguments.add(0, functionIndex);
+                result = ((Invocable) NativeLibrary.handle).invokeFunction(functionName.substring(0, separatorIndex), convertedArguments.toArray());
+            } else {
+                result = ((Invocable) NativeLibrary.handle).invokeFunction(functionName, convertedArguments.toArray());
+            }
 
             for (int i = 0; i < arguments.length; i++) {
                 Object argument = arguments[i];

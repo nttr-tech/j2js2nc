@@ -628,7 +628,34 @@ class CallbackReference extends WeakReference {
             if (Function.isVarArgs(method)) {
                 args = Function.concatenateVarArgs(args);
             }
+            if (function.getName().startsWith("native@")) {
+                int functionIndex = Integer.parseInt(function.getName().substring("native@0x".length()), 16);
+                function.setName("dynCall_" + toSignature(method) + "@" + functionIndex);
+            }
             return function.invoke(method.getReturnType(), args, options);
+        }
+        
+        private String toSignature(Method method) {
+            StringBuilder result = new StringBuilder();
+            result.append(toSignature(method.getReturnType()));
+            for (Class<?> clazz: method.getParameterTypes()) {
+                result.append(toSignature(clazz));
+            }
+            return result.toString();
+        }
+        
+        private String toSignature(Class<?> clazz) {
+            if (clazz == null || clazz == void.class || clazz == Void.class) {
+                return "v";
+            } else if (clazz == float.class || clazz == Float.class) {
+                return "d";
+            } else if (clazz == double.class || clazz == Double.class) {
+                return "d";
+            } else if (clazz == long.class || clazz == Long.class) {
+                return "ii";
+            } else {
+                return "i";
+            }
         }
         
         public Pointer getPointer() {
