@@ -1,22 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void hello() {
-	printf("Hello, World!\n");
-}
-
-char *allocate(int size) {
-	return malloc(size);
-}
-
-void set(char *buffer, int index, char value) {
-	buffer[index] = value;
-}
-
-int get(char *buffer, int index) {
-	return buffer[index];
-}
-
-void print(char *str) {
-	printf("%s\n", str);
+void hello(char *name) {
+	printf("Hello, %s!\n", name);
 }
