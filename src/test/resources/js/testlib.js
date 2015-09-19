@@ -6294,6 +6294,66 @@ function _fillInt64Buffer($buf,$len,$0,$1) {
  $27 = $3;
  STACKTOP = sp;return ($27|0);
 }
+function _fillFloatBuffer($buf,$len,$value) {
+ $buf = $buf|0;
+ $len = $len|0;
+ $value = +$value;
+ var $0 = 0, $1 = 0, $10 = 0, $11 = 0, $12 = 0, $2 = 0.0, $3 = 0, $4 = 0, $5 = 0, $6 = 0.0, $7 = 0, $8 = 0, $9 = 0, $i = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 16|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $buf;
+ $1 = $len;
+ $2 = $value;
+ $i = 0;
+ while(1) {
+  $3 = $i;
+  $4 = $1;
+  $5 = ($3|0)<($4|0);
+  if (!($5)) {
+   break;
+  }
+  $6 = $2;
+  $7 = $i;
+  $8 = $0;
+  $9 = (($8) + ($7<<2)|0);
+  HEAPF32[$9>>2] = $6;
+  $10 = $i;
+  $11 = (($10) + 1)|0;
+  $i = $11;
+ }
+ $12 = $1;
+ STACKTOP = sp;return ($12|0);
+}
+function _fillDoubleBuffer($buf,$len,$value) {
+ $buf = $buf|0;
+ $len = $len|0;
+ $value = +$value;
+ var $0 = 0, $1 = 0, $10 = 0, $11 = 0, $12 = 0, $2 = 0.0, $3 = 0, $4 = 0, $5 = 0, $6 = 0.0, $7 = 0, $8 = 0, $9 = 0, $i = 0, label = 0, sp = 0;
+ sp = STACKTOP;
+ STACKTOP = STACKTOP + 32|0; if ((STACKTOP|0) >= (STACK_MAX|0)) abort();
+ $0 = $buf;
+ $1 = $len;
+ $2 = $value;
+ $i = 0;
+ while(1) {
+  $3 = $i;
+  $4 = $1;
+  $5 = ($3|0)<($4|0);
+  if (!($5)) {
+   break;
+  }
+  $6 = $2;
+  $7 = $i;
+  $8 = $0;
+  $9 = (($8) + ($7<<3)|0);
+  HEAPF64[$9>>3] = $6;
+  $10 = $i;
+  $11 = (($10) + 1)|0;
+  $i = $11;
+ }
+ $12 = $1;
+ STACKTOP = sp;return ($12|0);
+}
 function _structCallbackFunction($arg1,$arg2) {
  $arg1 = $arg1|0;
  $arg2 = $arg2|0;
@@ -10005,7 +10065,7 @@ function b0(p0,p1) { p0 = p0|0;p1 = p1|0; nullFunc_iii(0);return 0; }
 // EMSCRIPTEN_END_FUNCS
 var FUNCTION_TABLE_iii = [b0,_structCallbackFunction];
 
-  return { _strlen: _strlen, _returnInt64Argument: _returnInt64Argument, _returnBooleanArgument: _returnBooleanArgument, _returnPointerArgument: _returnPointerArgument, _testStructurePointerArgument: _testStructurePointerArgument, _setCallbackInStruct: _setCallbackInStruct, _returnPointerArrayElement: _returnPointerArrayElement, _checkInt64ArgumentAlignment: _checkInt64ArgumentAlignment, _returnWStringArgument: _returnWStringArgument, _fillInt64Buffer: _fillInt64Buffer, _returnInt16Argument: _returnInt16Argument, _memset: _memset, _testStructureByReferenceArrayInitialization: _testStructureByReferenceArrayInitialization, _returnLongArgument: _returnLongArgument, _returnInt8Argument: _returnInt8Argument, _i64Add: _i64Add, _modifyStructureArray: _modifyStructureArray, _fillInt8Buffer: _fillInt8Buffer, _free: _free, _returnStringFromVariableSizedStructure: _returnStringFromVariableSizedStructure, _fillInt32Buffer: _fillInt32Buffer, _testStructureByValueArgument: _testStructureByValueArgument, _memcpy: _memcpy, _modifyStructureByReferenceArray: _modifyStructureByReferenceArray, _returnRotatedArgumentCount: _returnRotatedArgumentCount, _returnInt32Argument: _returnInt32Argument, _returnWideStringArrayElement: _returnWideStringArrayElement, _returnStringArrayElement: _returnStringArrayElement, _checkDoubleArgumentAlignment: _checkDoubleArgumentAlignment, _malloc: _malloc, _testStructureArrayInitialization: _testStructureArrayInitialization, _returnWideCharArgument: _returnWideCharArgument, _fillInt16Buffer: _fillInt16Buffer, _returnStringArgument: _returnStringArgument, runPostSets: runPostSets, stackAlloc: stackAlloc, stackSave: stackSave, stackRestore: stackRestore, establishStackSpace: establishStackSpace, setThrew: setThrew, setTempRet0: setTempRet0, getTempRet0: getTempRet0, dynCall_iii: dynCall_iii };
+  return { _strlen: _strlen, _returnInt64Argument: _returnInt64Argument, _returnBooleanArgument: _returnBooleanArgument, _returnPointerArgument: _returnPointerArgument, _testStructurePointerArgument: _testStructurePointerArgument, _setCallbackInStruct: _setCallbackInStruct, _returnPointerArrayElement: _returnPointerArrayElement, _checkInt64ArgumentAlignment: _checkInt64ArgumentAlignment, _returnWStringArgument: _returnWStringArgument, _fillFloatBuffer: _fillFloatBuffer, _fillDoubleBuffer: _fillDoubleBuffer, _fillInt64Buffer: _fillInt64Buffer, _returnInt16Argument: _returnInt16Argument, _memset: _memset, _testStructureByReferenceArrayInitialization: _testStructureByReferenceArrayInitialization, _returnLongArgument: _returnLongArgument, _returnInt8Argument: _returnInt8Argument, _i64Add: _i64Add, _modifyStructureArray: _modifyStructureArray, _fillInt8Buffer: _fillInt8Buffer, _free: _free, _returnStringFromVariableSizedStructure: _returnStringFromVariableSizedStructure, _fillInt32Buffer: _fillInt32Buffer, _testStructureByValueArgument: _testStructureByValueArgument, _memcpy: _memcpy, _modifyStructureByReferenceArray: _modifyStructureByReferenceArray, _returnRotatedArgumentCount: _returnRotatedArgumentCount, _returnInt32Argument: _returnInt32Argument, _returnWideStringArrayElement: _returnWideStringArrayElement, _returnStringArrayElement: _returnStringArrayElement, _checkDoubleArgumentAlignment: _checkDoubleArgumentAlignment, _malloc: _malloc, _testStructureArrayInitialization: _testStructureArrayInitialization, _returnWideCharArgument: _returnWideCharArgument, _fillInt16Buffer: _fillInt16Buffer, _returnStringArgument: _returnStringArgument, runPostSets: runPostSets, stackAlloc: stackAlloc, stackSave: stackSave, stackRestore: stackRestore, establishStackSpace: establishStackSpace, setThrew: setThrew, setTempRet0: setTempRet0, getTempRet0: getTempRet0, dynCall_iii: dynCall_iii };
 })
 // EMSCRIPTEN_END_ASM
 (Module.asmGlobalArg, Module.asmLibraryArg, buffer);
@@ -10063,6 +10123,18 @@ assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it a
 return real__returnWStringArgument.apply(null, arguments);
 };
 
+var real__fillFloatBuffer = asm["_fillFloatBuffer"]; asm["_fillFloatBuffer"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__fillFloatBuffer.apply(null, arguments);
+};
+
+var real__fillDoubleBuffer = asm["_fillDoubleBuffer"]; asm["_fillDoubleBuffer"] = function() {
+assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+return real__fillDoubleBuffer.apply(null, arguments);
+};
+
 var real__fillInt64Buffer = asm["_fillInt64Buffer"]; asm["_fillInt64Buffer"] = function() {
 assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
 assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
@@ -10111,10 +10183,10 @@ assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it a
 return real__fillInt8Buffer.apply(null, arguments);
 };
 
-var real__free = asm["_free"]; asm["_free"] = function() {
+var real__testStructureByValueArgument = asm["_testStructureByValueArgument"]; asm["_testStructureByValueArgument"] = function() {
 assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
 assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-return real__free.apply(null, arguments);
+return real__testStructureByValueArgument.apply(null, arguments);
 };
 
 var real__returnStringFromVariableSizedStructure = asm["_returnStringFromVariableSizedStructure"]; asm["_returnStringFromVariableSizedStructure"] = function() {
@@ -10129,10 +10201,10 @@ assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it a
 return real__fillInt32Buffer.apply(null, arguments);
 };
 
-var real__testStructureByValueArgument = asm["_testStructureByValueArgument"]; asm["_testStructureByValueArgument"] = function() {
+var real__free = asm["_free"]; asm["_free"] = function() {
 assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
 assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-return real__testStructureByValueArgument.apply(null, arguments);
+return real__free.apply(null, arguments);
 };
 
 var real__modifyStructureByReferenceArray = asm["_modifyStructureByReferenceArray"]; asm["_modifyStructureByReferenceArray"] = function() {
@@ -10209,6 +10281,8 @@ var _setCallbackInStruct = Module["_setCallbackInStruct"] = asm["_setCallbackInS
 var _returnPointerArrayElement = Module["_returnPointerArrayElement"] = asm["_returnPointerArrayElement"];
 var _returnStringArrayElement = Module["_returnStringArrayElement"] = asm["_returnStringArrayElement"];
 var _returnWStringArgument = Module["_returnWStringArgument"] = asm["_returnWStringArgument"];
+var _fillFloatBuffer = Module["_fillFloatBuffer"] = asm["_fillFloatBuffer"];
+var _fillDoubleBuffer = Module["_fillDoubleBuffer"] = asm["_fillDoubleBuffer"];
 var _fillInt64Buffer = Module["_fillInt64Buffer"] = asm["_fillInt64Buffer"];
 var _returnInt16Argument = Module["_returnInt16Argument"] = asm["_returnInt16Argument"];
 var _memset = Module["_memset"] = asm["_memset"];
@@ -10218,10 +10292,10 @@ var _returnInt8Argument = Module["_returnInt8Argument"] = asm["_returnInt8Argume
 var _i64Add = Module["_i64Add"] = asm["_i64Add"];
 var _modifyStructureArray = Module["_modifyStructureArray"] = asm["_modifyStructureArray"];
 var _fillInt8Buffer = Module["_fillInt8Buffer"] = asm["_fillInt8Buffer"];
-var _free = Module["_free"] = asm["_free"];
+var _testStructureByValueArgument = Module["_testStructureByValueArgument"] = asm["_testStructureByValueArgument"];
 var _returnStringFromVariableSizedStructure = Module["_returnStringFromVariableSizedStructure"] = asm["_returnStringFromVariableSizedStructure"];
 var _fillInt32Buffer = Module["_fillInt32Buffer"] = asm["_fillInt32Buffer"];
-var _testStructureByValueArgument = Module["_testStructureByValueArgument"] = asm["_testStructureByValueArgument"];
+var _free = Module["_free"] = asm["_free"];
 var runPostSets = Module["runPostSets"] = asm["runPostSets"];
 var _modifyStructureByReferenceArray = Module["_modifyStructureByReferenceArray"] = asm["_modifyStructureByReferenceArray"];
 var _returnRotatedArgumentCount = Module["_returnRotatedArgumentCount"] = asm["_returnRotatedArgumentCount"];
