@@ -1906,7 +1906,7 @@ public final class Native implements Version {
     }
 
     static byte getByte(long addr) {
-    	return ((Number)eval("HEAP8[" + addr + "];")).byteValue();
+    	return NativeLibrary.memoryAccesor.getByte(addr);
     }
 
     static char getChar(long addr) {
@@ -1917,14 +1917,14 @@ public final class Native implements Version {
     	if (addr % 2 != 0) {
     		throw new IllegalArgumentException();
     	}
-    	return ((Number)eval("HEAP16[" + (addr / 2) + "];")).shortValue();
+    	return NativeLibrary.memoryAccesor.getShort(addr);
     }
 
     static int getInt(long addr) {
     	if (addr % 4 != 0) {
     		throw new IllegalArgumentException();
     	}
-    	return ((Number)eval("HEAP32[" + (addr / 4) + "];")).intValue();
+    	return NativeLibrary.memoryAccesor.getInt(addr);
     }
 
     static long getLong(long addr) {
@@ -2002,14 +2002,14 @@ public final class Native implements Version {
     }
 
     static void setByte(long addr, byte value) {
-    	eval("HEAP8[" + addr + "] = " + value + ";");
+        NativeLibrary.memoryAccesor.setByte(addr, value);
     }
 
     static void setShort(long addr, short value) {
     	if (addr % 2 != 0) {
     		throw new IllegalArgumentException();
     	}
-    	eval("HEAP16[" + (addr / 2) + "] = " + value + ";");
+    	NativeLibrary.memoryAccesor.setShort(addr, value);
     }
 
     static void setChar(long addr, char value) {
@@ -2020,7 +2020,7 @@ public final class Native implements Version {
     	if (addr % 4 != 0) {
     		throw new IllegalArgumentException();
     	}
-    	eval("HEAP32[" + (addr / 4) + "] = " + value + ";");
+    	NativeLibrary.memoryAccesor.setInt(addr, value);
     }
 
     static void setLong(long addr, long value) {

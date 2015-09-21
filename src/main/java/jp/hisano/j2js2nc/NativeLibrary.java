@@ -17,8 +17,9 @@ package jp.hisano.j2js2nc;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,6 +34,11 @@ import java.util.Set;
 import java.util.StringTokenizer;
 
 import javax.script.ScriptEngine;
+import javax.script.ScriptException;
+
+import jdk.nashorn.api.scripting.ScriptObjectMirror;
+import jdk.nashorn.internal.runtime.ScriptObject;
+import jdk.nashorn.internal.runtime.arrays.ArrayData;
 
 /**
  * Provides management of native library resources.  One instance of this
@@ -68,6 +74,8 @@ import javax.script.ScriptEngine;
 public class NativeLibrary {
 
     static ScriptEngine handle;
+    static MemoryAccessor memoryAccesor;
+
     private final String libraryName;
     private final String libraryPath;
     private final Map functions = new HashMap();
@@ -93,6 +101,7 @@ public class NativeLibrary {
         this.libraryName = getLibraryName(libraryName);
         this.libraryPath = libraryPath;
         this.handle = handle;
+        this.memoryAccesor = new NashornMemoryAccessor(handle);
         Object option = options.get(Library.OPTION_CALLING_CONVENTION);
         int callingConvention = option instanceof Number
             ? ((Number)option).intValue() : Function.C_CONVENTION;
@@ -905,5 +914,108 @@ public class NativeLibrary {
         }
         
         return cpu + kernel + libc;
+    }
+
+    private static class GenericMemoryAccessor implements MemoryAccessor {
+        private ScriptEngine handle;
+        
+        GenericMemoryAccessor(ScriptEngine handle) {
+            this.handle = handle;
+        }
+        
+        @Override
+        public void setByte(long addr, byte value) {
+            eval("HEAP8[" + addr + "] = " + value + ";");
+        }
+        
+        @Override
+        public void setShort(long addr, short value) {
+            eval("HEAP16[" + (addr / 2) + "] = " + value + ";");
+        }
+        
+        @Override
+        public void setInt(long addr, int value) {
+            eval("HEAP32[" + (addr / 4) + "] = " + value + ";");
+        }
+        
+        @Override
+        public byte getByte(long addr) {
+            return ((Number)eval("HEAP8[" + addr + "];")).byteValue();
+        }
+        
+        @Override
+        public short getShort(long addr) {
+            return ((Number)eval("HEAP16[" + (addr / 2) + "];")).shortValue();
+        }
+        
+        @Override
+        public int getInt(long addr) {
+            return ((Number)eval("HEAP32[" + (addr / 4) + "];")).intValue();
+        }
+        
+        private Object eval(String script) {
+            try {
+                return handle.eval(script);
+            } catch (ScriptException e) {
+                throw new IndexOutOfBoundsException();
+            }
+        }
+    }
+    
+    @SuppressWarnings("restriction")
+    private static class NashornMemoryAccessor implements MemoryAccessor {
+        private ScriptEngine handle;
+        private ArrayData heap8;
+        private ArrayData heap16;
+        private ArrayData heap32;
+        
+        NashornMemoryAccessor(ScriptEngine handle) {
+            this.handle = handle;
+            heap8 = getScriptObject("HEAP8").getArray();
+            heap16 = getScriptObject("HEAP16").getArray();
+            heap32 = getScriptObject("HEAP32").getArray();
+        }
+        
+        private ScriptObject getScriptObject(String name) {
+            try {
+                ScriptObjectMirror mirror = (ScriptObjectMirror)handle.eval(name);
+                Class<ScriptObjectMirror> clazz = ScriptObjectMirror.class;
+                Field sobj = clazz.getDeclaredField("sobj");
+                sobj.setAccessible(true);
+                return (ScriptObject)sobj.get(mirror);
+            } catch (ReflectiveOperationException| SecurityException| ScriptException e) {
+                throw new IllegalStateException("JavaScript engine is not Noshorn");
+            }
+        }
+
+        @Override
+        public void setByte(long addr, byte value) {
+            heap8.set((int) addr, value, false);
+        }
+        
+        @Override
+        public void setShort(long addr, short value) {
+            heap16.set((int) (addr / 2), value, false);
+        }
+        
+        @Override
+        public void setInt(long addr, int value) {
+            heap32.set((int) (addr / 4), value, false);
+        }
+        
+        @Override
+        public byte getByte(long addr) {
+            return (byte)heap8.getInt((int) addr);
+        }
+
+        @Override
+        public short getShort(long addr) {
+            return (short) heap16.getInt((int) (addr / 2));
+        }
+
+        @Override
+        public int getInt(long addr) {
+            return heap32.getInt((int) (addr / 4));
+        }
     }
 }
