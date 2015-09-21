@@ -1931,8 +1931,8 @@ public final class Native implements Version {
     	if (addr % 4 != 0) {
     		throw new IllegalArgumentException();
     	}
-    	long result = ((Number)eval("HEAP32[" + (addr / 4) + "];")).longValue() & 0xFFFFFFFFL;
-    	result |= ((Number)eval("HEAP32[" + (addr / 4 + 1) + "];")).longValue() << 32;
+    	long result = ((long)getInt(addr)) & 0xFFFFFFFFL;;
+    	result |= ((long)getInt(addr + 4)) << 32;
     	return result;
     }
 
@@ -1997,7 +1997,7 @@ public final class Native implements Version {
 
     static void setMemory(long addr, long length, byte value) {
     	for (int i = 0; i < length; i++) {
-        	eval("HEAP8[" + (addr + i) + "] = " + value + ";");
+        	setByte(addr + i, value);
     	}
     }
 
@@ -2027,8 +2027,8 @@ public final class Native implements Version {
     	if (addr % 4 != 0) {
     		throw new IllegalArgumentException();
     	}
-    	eval("HEAP32[" + (addr / 4) + "] = " + (value & 0xFFFFFFFF) + ";");
-    	eval("HEAP32[" + (addr / 4 + 1) + "] = " + (value >> 32) + ";");
+    	setInt(addr, (int)(value & 0xFFFFFFFF));
+    	setInt(addr + 4, (int)(value >> 32));
     }
 
     static void setFloat(long addr, float value) {
@@ -2293,7 +2293,7 @@ public final class Native implements Version {
         }
     }
 
-    static Object eval(String script) {
+    private static Object eval(String script) {
     	try {
     		return NativeLibrary.handle.eval(script);
     	} catch (ScriptException e) {
