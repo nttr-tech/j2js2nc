@@ -7,36 +7,42 @@ So I developed j2js2nc from JNA 4.1 code to support Emscripten on Nashorn (Java 
 How to use
 ==========
 
-1. Write C code and save it as 'hello.c'
+* Write C code and save it as 'hello.c'
 
-    #include <stdio.h>
-    #include <stdlib.h>
-    
-    void hello(char *name) {
-    	printf("Hello, %s!\n", name);
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+void hello(char *name) {
+ 	printf("Hello, %s!\n", name);
+}
+```
+
+* Compile 'hello.c' to 'js/hello.js' with Emscripten on your terminal
+
+```sh
+emcc hello.c  -s EXPORTED_FUNCTIONS="['_hello']" -o js/hello.js
+```
+
+* Write Java code and run it
+
+```java
+package jp.hisano.sample;
+
+import jp.hisano.j2js2nc.Library;
+import jp.hisano.j2js2nc.Native;
+
+public class Main {
+    public interface Hello extends Library {
+        void hello(String name);
     }
 
-2. Compile 'hello.c' to 'js/hello.js' with Emscripten on your terminal
-
-    emcc hello.c  -s EXPORTED_FUNCTIONS="['_hello']" -o js/hello.js
-
-3. Write Java code and run it
-
-    package jp.hisano.sample;
-    
-    import jp.hisano.j2js2nc.Library;
-    import jp.hisano.j2js2nc.Native;
-    
-    public class Main {
-        public interface Hello extends Library {
-            void hello(String name);
-        }
-    
-        public static void main(String[] args) throws Exception {
-            Hello library = (Hello) Native.loadLibrary("hello", Hello.class);
-            library.hello("j2js2nc");
-        }
+    public static void main(String[] args) throws Exception {
+        Hello library = (Hello) Native.loadLibrary("hello", Hello.class);
+        library.hello("j2js2nc");
     }
+}
+```
 
 License
 =======
